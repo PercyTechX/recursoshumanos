@@ -91,6 +91,6 @@ solo **sume permisos**, sin tocar la lógica existente.
 | Restricción | Impacto | Mitigación |
 |---|---|---|
 | Sin Node.js en servidor | No se compilan assets en prod | Compilar en local y subir `public/build` |
-| Sin SSH (por ahora) | No `composer`/`artisan` en servidor | Pedir SSH; o subir `vendor/` y correr migraciones vía SQL/import |
+| **Sin SSH** (confirmado por Yachay, 2026-07-08) | No `composer`/`artisan`/`npm` en servidor | Subir `vendor/` + `public/build` ya compilados; migrar vía SQL/phpMyAdmin. Ver [despliegue](05-despliegue.md) |
 | Máx. 200.000 archivos | Riesgo al acumular escaneos | Documentos en OneDrive, no en el disco del hosting |
 | Sin API de envío a SUNAT | No hay planilla automática | Módulo de **exportación** para PDT PLAME (futuro) |

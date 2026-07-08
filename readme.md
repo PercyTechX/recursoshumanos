@@ -42,6 +42,7 @@ Detalle y justificación en [docs/01-stack-tecnologico.md](docs/01-stack-tecnolo
 | [docs/02-arquitectura.md](docs/02-arquitectura.md) | Arquitectura modular, motores reutilizables y modelo de datos. |
 | [docs/03-buenas-practicas.md](docs/03-buenas-practicas.md) | Convenciones de código, Git, seguridad y flujo de trabajo. |
 | [docs/04-ui-diseno.md](docs/04-ui-diseno.md) | Estilo visual (modo claro, inspirado en Docker), paleta/tokens y componentes. |
+| [docs/05-despliegue.md](docs/05-despliegue.md) | Estrategia de despliegue **sin SSH** (GitHub → cPanel Git, `vendor`/build incluidos). |
 
 ---
 
