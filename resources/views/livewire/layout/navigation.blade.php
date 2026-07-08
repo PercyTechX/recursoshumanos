@@ -38,6 +38,9 @@ new class extends Component
                         <x-nav-link :href="route('empleados.index')" :active="request()->routeIs('empleados.*')" wire:navigate>
                             Empleados
                         </x-nav-link>
+                        <x-nav-link :href="route('documentos.index')" :active="request()->routeIs('documentos.*')" wire:navigate>
+                            Documentos
+                        </x-nav-link>
                     @endhasanyrole
                 </div>
             </div>
@@ -93,6 +96,9 @@ new class extends Component
             @hasanyrole('RRHH|Gerencia|Supervisor')
                 <x-responsive-nav-link :href="route('empleados.index')" :active="request()->routeIs('empleados.*')" wire:navigate>
                     Empleados
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('documentos.index')" :active="request()->routeIs('documentos.*')" wire:navigate>
+                    Documentos
                 </x-responsive-nav-link>
             @endhasanyrole
         </div>

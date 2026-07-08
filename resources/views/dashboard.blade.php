@@ -20,25 +20,35 @@
                 </p>
             </div>
 
-            {{-- Resumen (marcadores; se conectarán en las próximas fases) --}}
+            {{-- Resumen del semáforo (datos reales) --}}
+            @php
+                $docs = \App\Models\Documento::with('tipoDocumento')->get();
+                $vig = $docs->where('estado', 'vigente')->count();
+                $porV = $docs->where('estado', 'por_vencer')->count();
+                $venc = $docs->where('estado', 'vencido')->count();
+            @endphp
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div class="bg-surface border border-line rounded-xl p-4 border-l-4 border-l-success">
-                    <div class="text-sm text-muted">Documentos vigentes</div>
-                    <div class="text-2xl font-bold text-ink tabular-nums">—</div>
-                </div>
-                <div class="bg-surface border border-line rounded-xl p-4 border-l-4 border-l-warning">
-                    <div class="text-sm text-muted">Por vencer</div>
-                    <div class="text-2xl font-bold text-ink tabular-nums">—</div>
-                </div>
-                <div class="bg-surface border border-line rounded-xl p-4 border-l-4 border-l-danger">
-                    <div class="text-sm text-muted">Vencidos</div>
-                    <div class="text-2xl font-bold text-ink tabular-nums">—</div>
-                </div>
+                <a href="{{ route('documentos.index', ['filtroEstado' => 'vigente']) }}"
+                   class="bg-surface border border-line rounded-xl p-4 border-l-4 border-l-success hover:shadow-sm">
+                    <div class="text-sm text-muted">🟢 Documentos vigentes</div>
+                    <div class="text-2xl font-bold text-ink tabular-nums">{{ $vig }}</div>
+                </a>
+                <a href="{{ route('documentos.index', ['filtroEstado' => 'por_vencer']) }}"
+                   class="bg-surface border border-line rounded-xl p-4 border-l-4 border-l-warning hover:shadow-sm">
+                    <div class="text-sm text-muted">🟡 Por vencer</div>
+                    <div class="text-2xl font-bold text-ink tabular-nums">{{ $porV }}</div>
+                </a>
+                <a href="{{ route('documentos.index', ['filtroEstado' => 'vencido']) }}"
+                   class="bg-surface border border-line rounded-xl p-4 border-l-4 border-l-danger hover:shadow-sm">
+                    <div class="text-sm text-muted">🔴 Vencidos</div>
+                    <div class="text-2xl font-bold text-ink tabular-nums">{{ $venc }}</div>
+                </a>
             </div>
 
             <div class="bg-surface border border-line rounded-xl p-6 text-muted text-sm">
-                🚧 Los módulos (Empleados, Documentos, Vacaciones) se irán habilitando por fases.
-                Esta es la base del sistema (autenticación y roles) ya funcionando.
+                Accesos rápidos:
+                <a href="{{ route('empleados.index') }}" class="text-primary font-medium hover:underline">Empleados</a> ·
+                <a href="{{ route('documentos.index') }}" class="text-primary font-medium hover:underline">Documentos</a>
             </div>
 
         </div>
