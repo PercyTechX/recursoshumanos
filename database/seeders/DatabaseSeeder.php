@@ -3,23 +3,27 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
      * Seed the application's database.
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // 1) Datos permanentes (roles, catálogos). Siempre se ejecuta.
+        $this->call(CatalogoSeeder::class);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // 2) Usuario administrador inicial (RRHH).
+        $admin = User::firstOrCreate(
+            ['email' => 'admin@rrhh.test'],
+            ['name' => 'Administrador RRHH', 'password' => Hash::make('password')],
+        );
+        $admin->syncRoles('RRHH');
+
+        // 3) Datos de prueba desechables (solo fuera de producción).
+        // Se ejecuta aparte con: php artisan db:seed --class=DemoSeeder
     }
 }

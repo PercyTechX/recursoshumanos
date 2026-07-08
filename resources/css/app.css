@@ -1,34 +1,3 @@
-@import 'tailwindcss';
-
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
-@source '../**/*.blade.php';
-@source '../**/*.js';
-
-@theme {
-    --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif,
-        'Apple Color Emoji', 'Segoe UI Emoji';
-
-    /* Marca — inspirada en Docker */
-    --color-primary: #2496ED;
-    --color-primary-dark: #1B7FD1;
-    --color-primary-tint: #E5F2FD;
-    --color-navy: #0D3B66;
-
-    /* Neutrales (sesgo azul) */
-    --color-ink: #10233A;
-    --color-muted: #46607C;
-    --color-faint: #8AA0B8;
-    --color-line: #DCE7F1;
-    --color-canvas: #F2F8FD;
-    --color-surface: #FFFFFF;
-
-    /* Semánticos — semáforo (no cambian con la marca) */
-    --color-success: #167C4A;
-    --color-success-tint: #E4F4EB;
-    --color-warning: #B26A0B;
-    --color-warning-tint: #FAF0DA;
-    --color-danger: #C62828;
-    --color-danger-tint: #FBE9E7;
-    --color-excel: #217346;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

@@ -56,41 +56,43 @@ botón se hace en un solo lugar y se refleja en toda la app.
 
 ---
 
-## Configuración en Tailwind (v4)
+## Configuración en Tailwind (v3)
 
-Laravel 12 usa **Tailwind CSS v4**, que se configura **por CSS** (no con
-`tailwind.config.js`). Los colores se definen una sola vez en
-`resources/css/app.css` dentro de `@theme`, y quedan disponibles como utilidades
-(`bg-primary`, `text-danger`, `border-line`, etc.):
+El proyecto usa **Tailwind CSS v3** (el que instala Laravel Breeze). Los colores
+se definen una sola vez en `tailwind.config.js` dentro de `theme.extend.colors`,
+y quedan disponibles como utilidades (`bg-primary`, `text-danger`, `border-line`,
+`from-navy`, etc.):
 
-```css
-/* resources/css/app.css */
-@import 'tailwindcss';
-
-@theme {
-    --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
-
-    /* Marca (Docker) */
-    --color-primary: #2496ED;
-    --color-primary-dark: #1B7FD1;
-    --color-primary-tint: #E5F2FD;
-    --color-navy: #0D3B66;
-
-    /* Neutrales */
-    --color-ink: #10233A;
-    --color-muted: #46607C;
-    --color-faint: #8AA0B8;
-    --color-line: #DCE7F1;
-    --color-canvas: #F2F8FD;
-    --color-surface: #FFFFFF;
-
-    /* Semánticos (semáforo) */
-    --color-success: #167C4A;  --color-success-tint: #E4F4EB;
-    --color-warning: #B26A0B;  --color-warning-tint: #FAF0DA;
-    --color-danger:  #C62828;  --color-danger-tint:  #FBE9E7;
-    --color-excel:   #217346;
-}
+```js
+// tailwind.config.js
+export default {
+    content: [
+        './resources/views/**/*.blade.php',
+        './resources/js/**/*.js',
+        './vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php',
+        './storage/framework/views/*.php',
+    ],
+    theme: {
+        extend: {
+            fontFamily: { sans: ['system-ui', '-apple-system', 'Segoe UI', 'Roboto'] },
+            colors: {
+                primary: { DEFAULT: '#2496ED', dark: '#1B7FD1', tint: '#E5F2FD' },
+                navy: '#0D3B66',
+                ink: '#10233A', muted: '#46607C', faint: '#8AA0B8',
+                line: '#DCE7F1', canvas: '#F2F8FD', surface: '#FFFFFF',
+                success: { DEFAULT: '#167C4A', tint: '#E4F4EB' },
+                warning: { DEFAULT: '#B26A0B', tint: '#FAF0DA' },
+                danger:  { DEFAULT: '#C62828', tint: '#FBE9E7' },
+                excel: '#217346',
+            },
+        },
+    },
+    plugins: [require('@tailwindcss/forms')],
+};
 ```
+
+> `resources/css/app.css` mantiene las directivas `@tailwind base/components/utilities`.
+> Los colores NO van ahí, van en `tailwind.config.js`.
 
 > ¿Gerencia pide otro azul o GDS tiene su color de marca? Se cambia
 > `--color-primary` en este archivo y **toda la interfaz se actualiza**.
