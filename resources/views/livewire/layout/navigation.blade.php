@@ -32,8 +32,13 @@ new class extends Component
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" wire:navigate>
-                        {{ __('Dashboard') }}
+                        Tablero
                     </x-nav-link>
+                    @hasanyrole('RRHH|Gerencia|Supervisor')
+                        <x-nav-link :href="route('empleados.index')" :active="request()->routeIs('empleados.*')" wire:navigate>
+                            Empleados
+                        </x-nav-link>
+                    @endhasanyrole
                 </div>
             </div>
 
@@ -83,8 +88,13 @@ new class extends Component
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
         <div class="pt-2 pb-3 space-y-1">
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" wire:navigate>
-                {{ __('Dashboard') }}
+                Tablero
             </x-responsive-nav-link>
+            @hasanyrole('RRHH|Gerencia|Supervisor')
+                <x-responsive-nav-link :href="route('empleados.index')" :active="request()->routeIs('empleados.*')" wire:navigate>
+                    Empleados
+                </x-responsive-nav-link>
+            @endhasanyrole
         </div>
 
         <!-- Responsive Settings Options -->
