@@ -22,10 +22,11 @@
 
             {{-- Resumen del semáforo (datos reales) --}}
             @php
-                $docs = \App\Models\Documento::with('tipoDocumento')->get();
-                $vig = $docs->where('estado', 'vigente')->count();
-                $porV = $docs->where('estado', 'por_vencer')->count();
-                $venc = $docs->where('estado', 'vencido')->count();
+                // Cuenta solo el documento ACTUAL de cada requisito (no el historial)
+                $r = \App\Models\Documento::resumenSemaforo();
+                $vig = $r['vigente'];
+                $porV = $r['por_vencer'];
+                $venc = $r['vencido'];
             @endphp
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <a href="{{ route('documentos.index', ['filtroEstado' => 'vigente']) }}"

@@ -74,4 +74,34 @@ class Documento extends Model
 
         return (int) now()->startOfDay()->diffInDays($this->fecha_vencimiento->copy()->startOfDay(), false);
     }
+
+    // ---- Historial / documento "actual" ----
+
+    /**
+     * Documento ACTUAL de cada requisito (empleado + tipo): el de vencimiento
+     * más reciente. Los demás quedan como historial (trazabilidad), pero no
+     * "alarman" en el semáforo.
+     */
+    public static function actuales(): \Illuminate\Support\Collection
+    {
+        return static::with(['empleado', 'tipoDocumento'])
+            ->get()
+            ->groupBy(fn (self $d) => $d->empleado_id.'-'.$d->tipo_documento_id)
+            ->map(fn ($grupo) => $grupo
+                ->sortByDesc(fn (self $d) => [$d->fecha_vencimiento?->timestamp ?? 0, $d->id])
+                ->first())
+            ->values();
+    }
+
+    /** Conteo del semáforo considerando SOLO los documentos actuales. */
+    public static function resumenSemaforo(): array
+    {
+        $actuales = static::actuales();
+
+        return [
+            'vigente' => $actuales->where('estado', self::VIGENTE)->count(),
+            'por_vencer' => $actuales->where('estado', self::POR_VENCER)->count(),
+            'vencido' => $actuales->where('estado', self::VENCIDO)->count(),
+        ];
+    }
 }

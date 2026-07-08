@@ -22,6 +22,15 @@ new class extends Component {
     #[Url]
     public string $filtroTipo = '';
 
+    #[Url]
+    public bool $soloActuales = true;
+
+    #[Url]
+    public string $orden = 'vencimiento'; // empleado | estado | vencimiento
+
+    #[Url]
+    public string $ordenDir = 'asc';
+
     public bool $mostrarForm = false;
     public ?int $editandoId = null;
 
@@ -120,8 +129,37 @@ new class extends Component {
         $this->resetPage();
     }
 
+    public function updatingSoloActuales(): void
+    {
+        $this->resetPage();
+    }
+
+    public function ordenarPor(string $campo): void
+    {
+        if ($this->orden === $campo) {
+            $this->ordenDir = $this->ordenDir === 'asc' ? 'desc' : 'asc';
+        } else {
+            $this->orden = $campo;
+            $this->ordenDir = 'asc';
+        }
+        $this->resetPage();
+    }
+
+    /** Muestra todas las versiones (historial) de un requisito (empleado + tipo). */
+    public function verHistorial(int $empleadoId, int $tipoId): void
+    {
+        $this->soloActuales = false;
+        $this->filtroTipo = (string) $tipoId;
+        $this->filtroEstado = '';
+        $this->buscar = Empleado::find($empleadoId)?->numero_documento ?? '';
+        $this->resetPage();
+    }
+
     public function with(): array
     {
+        // IDs de los documentos "actuales" (el vigente de cada empleado+tipo)
+        $actualIds = Documento::actuales()->pluck('id')->flip();
+
         // Base (filtros que sí se pueden hacer en BD)
         $coleccion = Documento::query()
             ->with(['empleado', 'tipoDocumento'])
@@ -130,15 +168,35 @@ new class extends Component {
                 ->orWhere('apellidos', 'like', '%'.$this->buscar.'%')
                 ->orWhere('numero_documento', 'like', '%'.$this->buscar.'%')))
             ->when($this->filtroTipo, fn ($q) => $q->where('tipo_documento_id', $this->filtroTipo))
-            ->orderByRaw('fecha_vencimiento is null, fecha_vencimiento asc')
             ->get();
+
+        // Solo el documento actual de cada requisito (oculta el historial)
+        if ($this->soloActuales) {
+            $coleccion = $coleccion->filter(fn ($d) => $actualIds->has($d->id))->values();
+        }
 
         // El estado (semáforo) se calcula en PHP → se filtra aquí
         if ($this->filtroEstado) {
             $coleccion = $coleccion->filter(fn ($d) => $d->estado === $this->filtroEstado)->values();
         }
 
-        // Paginación manual (porque el estado no es una columna de BD)
+        // Ordenamiento (se hace en PHP porque el estado no es columna de BD)
+        $dir = $this->ordenDir === 'desc' ? -1 : 1;
+        $pesoEstado = ['vencido' => 0, 'por_vencer' => 1, 'vigente' => 2, 'sin_vigencia' => 3];
+        $coleccion = $coleccion->sort(function ($a, $b) use ($dir, $pesoEstado) {
+            $cmp = match ($this->orden) {
+                'empleado' => strcmp(
+                    ($a->empleado?->apellidos ?? '').($a->empleado?->nombres ?? ''),
+                    ($b->empleado?->apellidos ?? '').($b->empleado?->nombres ?? '')
+                ),
+                'estado' => ($pesoEstado[$a->estado] ?? 9) <=> ($pesoEstado[$b->estado] ?? 9),
+                default => ($a->fecha_vencimiento?->timestamp ?? PHP_INT_MAX) <=> ($b->fecha_vencimiento?->timestamp ?? PHP_INT_MAX),
+            };
+
+            return $cmp * $dir;
+        })->values();
+
+        // Paginación manual
         $porPagina = 10;
         $pagina = LengthAwarePaginator::resolveCurrentPage();
         $items = $coleccion->slice(($pagina - 1) * $porPagina, $porPagina)->values();
@@ -147,17 +205,10 @@ new class extends Component {
             ['path' => request()->url(), 'pageName' => 'page'],
         );
 
-        // Resumen global (semáforo) sobre TODOS los documentos
-        $todos = Documento::with('tipoDocumento')->get();
-        $resumen = [
-            'vigente' => $todos->where('estado', Documento::VIGENTE)->count(),
-            'por_vencer' => $todos->where('estado', Documento::POR_VENCER)->count(),
-            'vencido' => $todos->where('estado', Documento::VENCIDO)->count(),
-        ];
-
         return [
             'documentos' => $documentos,
-            'resumen' => $resumen,
+            'actualIds' => $actualIds,
+            'resumen' => Documento::resumenSemaforo(), // solo cuenta los actuales
             'empleados' => Empleado::where('situacion', 'activo')->orderBy('apellidos')->get(),
             'tipos' => TipoDocumento::where('activo', true)->orderBy('nombre')->get(),
         ];
@@ -213,6 +264,11 @@ new class extends Component {
             @endforeach
         </select>
 
+        <label class="flex items-center gap-2 text-sm text-muted px-1" title="Muestra solo el documento actual de cada requisito; desmárcalo para ver el historial completo">
+            <input type="checkbox" wire:model.live="soloActuales" class="rounded border-line text-primary focus:ring-primary">
+            Solo vigentes
+        </label>
+
         <button wire:click="nuevo" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
             + Nuevo
         </button>
@@ -228,20 +284,38 @@ new class extends Component {
         <table class="w-full text-sm min-w-[760px]">
             <thead>
                 <tr class="text-left text-xs uppercase tracking-wide text-faint bg-canvas border-b border-line">
-                    <th class="px-4 py-3">Empleado</th>
+                    <th class="px-4 py-3">
+                        <button wire:click="ordenarPor('empleado')" class="uppercase tracking-wide hover:text-primary">
+                            Empleado @if ($orden === 'empleado') {{ $ordenDir === 'asc' ? '▲' : '▼' }} @endif
+                        </button>
+                    </th>
                     <th class="px-4 py-3">Documento</th>
                     <th class="px-4 py-3">Emisión</th>
-                    <th class="px-4 py-3">Vencimiento</th>
-                    <th class="px-4 py-3">Estado</th>
+                    <th class="px-4 py-3">
+                        <button wire:click="ordenarPor('vencimiento')" class="uppercase tracking-wide hover:text-primary">
+                            Vencimiento @if ($orden === 'vencimiento') {{ $ordenDir === 'asc' ? '▲' : '▼' }} @endif
+                        </button>
+                    </th>
+                    <th class="px-4 py-3">
+                        <button wire:click="ordenarPor('estado')" class="uppercase tracking-wide hover:text-primary">
+                            Estado @if ($orden === 'estado') {{ $ordenDir === 'asc' ? '▲' : '▼' }} @endif
+                        </button>
+                    </th>
                     <th class="px-4 py-3">Archivo</th>
                     <th class="px-4 py-3 text-right">Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse ($documentos as $d)
-                    <tr class="border-b border-line last:border-0 hover:bg-canvas/60">
+                    @php $esActual = $actualIds->has($d->id); @endphp
+                    <tr class="border-b border-line last:border-0 hover:bg-canvas/60 {{ $esActual ? '' : 'bg-canvas/40' }}">
                         <td class="px-4 py-3 font-medium text-ink">{{ $d->empleado?->apellidos }}, {{ $d->empleado?->nombres }}</td>
-                        <td class="px-4 py-3 text-muted">{{ $d->tipoDocumento?->nombre }}</td>
+                        <td class="px-4 py-3 text-muted">
+                            {{ $d->tipoDocumento?->nombre }}
+                            @unless ($esActual)
+                                <span class="ml-1 inline-flex items-center rounded bg-canvas text-faint border border-line px-1.5 py-0.5 text-[10px] font-semibold uppercase">Histórico</span>
+                            @endunless
+                        </td>
                         <td class="px-4 py-3 text-muted tabular-nums">{{ optional($d->fecha_emision)->format('d/m/Y') ?? '—' }}</td>
                         <td class="px-4 py-3 text-muted tabular-nums">{{ optional($d->fecha_vencimiento)->format('d/m/Y') ?? '—' }}</td>
                         <td class="px-4 py-3">
@@ -266,7 +340,9 @@ new class extends Component {
                             @endif
                         </td>
                         <td class="px-4 py-3 text-right whitespace-nowrap">
-                            <button wire:click="editar({{ $d->id }})" class="text-primary hover:underline text-sm font-medium">Editar</button>
+                            <button wire:click="verHistorial({{ $d->empleado_id }}, {{ $d->tipo_documento_id }})"
+                                    class="text-muted hover:text-primary hover:underline text-sm font-medium" title="Ver todas las versiones de este requisito">Historial</button>
+                            <button wire:click="editar({{ $d->id }})" class="ml-3 text-primary hover:underline text-sm font-medium">Editar</button>
                             <button wire:click="eliminar({{ $d->id }})" wire:confirm="¿Eliminar este documento?"
                                     class="ml-3 text-danger hover:underline text-sm font-medium">Eliminar</button>
                         </td>
