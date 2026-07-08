@@ -6,6 +6,15 @@ sistema funciona y aporta valor. No se pasa a la siguiente sin cerrar la anterio
 
 > Principio rector: **entregar valor temprano y seguido**. El MVP son las Fases 1–4.
 
+## Estado y reprioritización (actualizado 2026-07-08)
+
+- ✅ **Fase 0** (entorno) y **Fase 1** (núcleo: auth, roles, empleados) — hechas.
+- ✅ **Fase 2** (documentos + vigencia + semáforo, con trazabilidad/historial) — hecha.
+- 🔼 **Reprioritización:** por necesidad del negocio, el **Control de Activos/EPP +
+  la ficha/Expediente del empleado** se adelanta y pasa a ser la **siguiente fase**
+  (antes estaba en "futuro"). Detalle completo en [06-activos.md](06-activos.md).
+- ⏬ **Vacaciones** y **planilla** se posponen hasta after de activos.
+
 ---
 
 ## Fase 0 — Preparación del entorno ⚙️
@@ -99,7 +108,8 @@ aislada:
 Módulos "enchufables". No se construyen ahora; el diseño reserva los ganchos.
 
 - [ ] ⏱️ **Tareo / Asistencia** (`marcaciones`, `jornadas`).
-- [ ] 🔧 **Control de activos** (`activos`, `categorias_activo`, motor de `asignaciones`).
+- [x] 🔧 **Control de activos / EPP + Expediente** → **ADELANTADO** a la siguiente fase.
+      Ver [06-activos.md](06-activos.md).
 - [ ] 🆔 **Autocompletado por DNI** (RENIEC CEL oficial / API de terceros).
 - [ ] 🧾 **Planilla**: catálogo `conceptos`, `derechohabientes`, descansos médicos/CITT,
       licencias, y **exportación** para PDT PLAME (no envío directo — SUNAT no lo permite por API).
