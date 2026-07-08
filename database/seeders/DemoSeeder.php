@@ -2,8 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Models\Activo;
 use App\Models\Area;
 use App\Models\Cargo;
+use App\Models\CategoriaActivo;
 use App\Models\Documento;
 use App\Models\Empleado;
 use App\Models\Sede;
@@ -103,6 +105,25 @@ class DemoSeeder extends Seeder
                     'fecha_emision' => now()->addDays($offset)->subYear()->toDateString(),
                     'observacion' => 'Documento de prueba',
                 ],
+            );
+        }
+
+        // Activos de ejemplo (retornables, disponibles)
+        $cat = CategoriaActivo::pluck('id', 'nombre');
+        $activos = [
+            ['Taladro Bosch GSB 550', 'HERR-001', 'Herramientas', 320.00],
+            ['Taladro DeWalt DCD771', 'HERR-002', 'Herramientas', 450.00],
+            ['Amoladora Makita', 'HERR-003', 'Herramientas', 280.00],
+            ['Celular Samsung A15', 'EQ-001', 'Equipos electrónicos', 650.00],
+            ['Laptop Lenovo V15', 'EQ-002', 'Equipos electrónicos', 2100.00],
+        ];
+        foreach ($activos as [$nombre, $codigo, $categoria, $costo]) {
+            if (! isset($cat[$categoria])) {
+                continue;
+            }
+            Activo::updateOrCreate(
+                ['codigo' => $codigo],
+                ['nombre' => $nombre, 'categoria_id' => $cat[$categoria], 'costo' => $costo, 'estado' => 'disponible'],
             );
         }
     }

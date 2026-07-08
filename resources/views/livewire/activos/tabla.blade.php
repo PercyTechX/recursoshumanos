@@ -1,0 +1,242 @@
+<?php
+
+use App\Models\Activo;
+use App\Models\CategoriaActivo;
+use Illuminate\Validation\Rule;
+use Livewire\Attributes\Url;
+use Livewire\Volt\Component;
+use Livewire\WithPagination;
+
+new class extends Component {
+    use WithPagination;
+
+    #[Url]
+    public string $buscar = '';
+
+    #[Url]
+    public string $filtroCategoria = '';
+
+    #[Url]
+    public string $filtroEstado = '';
+
+    public bool $mostrarForm = false;
+    public ?int $editandoId = null;
+
+    // Formulario
+    public ?int $categoria_id = null;
+    public string $nombre = '';
+    public string $codigo = '';
+    public string $costo = '';
+    public string $estado = 'disponible';
+    public string $descripcion = '';
+
+    protected function rules(): array
+    {
+        return [
+            'categoria_id' => ['required', 'exists:categorias_activo,id'],
+            'nombre' => ['required', 'string', 'max:150'],
+            'codigo' => ['nullable', 'string', 'max:60', Rule::unique('activos', 'codigo')->ignore($this->editandoId)],
+            'costo' => ['required', 'numeric', 'min:0'],
+            'estado' => ['required', Rule::in(array_keys(Activo::ESTADOS))],
+            'descripcion' => ['nullable', 'string', 'max:500'],
+        ];
+    }
+
+    public function nuevo(): void
+    {
+        $this->resetForm();
+        $this->mostrarForm = true;
+    }
+
+    public function editar(int $id): void
+    {
+        $a = Activo::findOrFail($id);
+        $this->editandoId = $a->id;
+        $this->fill($a->only(['categoria_id', 'nombre', 'codigo', 'estado', 'descripcion']));
+        $this->costo = (string) $a->costo;
+        $this->mostrarForm = true;
+    }
+
+    public function guardar(): void
+    {
+        $data = $this->validate();
+        Activo::updateOrCreate(['id' => $this->editandoId], $data);
+        $this->mostrarForm = false;
+        $this->resetForm();
+        session()->flash('ok', 'Activo guardado correctamente.');
+    }
+
+    public function eliminar(int $id): void
+    {
+        Activo::findOrFail($id)->delete();
+        session()->flash('ok', 'Activo eliminado.');
+    }
+
+    public function resetForm(): void
+    {
+        $this->reset(['editandoId', 'categoria_id', 'nombre', 'codigo', 'costo', 'descripcion']);
+        $this->estado = 'disponible';
+        $this->resetErrorBag();
+    }
+
+    public function updatingBuscar(): void
+    {
+        $this->resetPage();
+    }
+
+    public function with(): array
+    {
+        $activos = Activo::query()
+            ->with('categoria')
+            ->when($this->buscar, fn ($q) => $q->where(fn ($w) => $w
+                ->where('nombre', 'like', '%'.$this->buscar.'%')
+                ->orWhere('codigo', 'like', '%'.$this->buscar.'%')))
+            ->when($this->filtroCategoria, fn ($q) => $q->where('categoria_id', $this->filtroCategoria))
+            ->when($this->filtroEstado, fn ($q) => $q->where('estado', $this->filtroEstado))
+            ->orderBy('nombre')
+            ->paginate(10);
+
+        return [
+            'activos' => $activos,
+            'categorias' => CategoriaActivo::where('activo', true)->orderBy('nombre')->get(),
+            'estados' => Activo::ESTADOS,
+        ];
+    }
+}; ?>
+
+<div>
+    @if (session('ok'))
+        <div class="mb-4 rounded-lg bg-success-tint text-success px-4 py-2 text-sm font-medium">{{ session('ok') }}</div>
+    @endif
+
+    {{-- Barra de acciones --}}
+    <div class="flex flex-wrap items-center gap-2 mb-4">
+        <div class="flex-1 min-w-[180px] flex items-center gap-2 rounded-lg border border-line bg-canvas px-3 py-2">
+            <span class="text-faint">🔎</span>
+            <input type="text" wire:model.live.debounce.400ms="buscar" placeholder="Buscar por nombre o código…"
+                   class="w-full bg-transparent border-0 p-0 text-sm text-ink placeholder:text-faint focus:ring-0">
+        </div>
+
+        <select wire:model.live="filtroCategoria" class="rounded-lg border-line bg-surface text-sm text-ink focus:border-primary focus:ring-primary">
+            <option value="">Todas las categorías</option>
+            @foreach ($categorias as $c)
+                <option value="{{ $c->id }}">{{ $c->nombre }}</option>
+            @endforeach
+        </select>
+
+        <select wire:model.live="filtroEstado" class="rounded-lg border-line bg-surface text-sm text-ink focus:border-primary focus:ring-primary">
+            <option value="">Todos los estados</option>
+            @foreach ($estados as $val => $lbl)
+                <option value="{{ $val }}">{{ $lbl }}</option>
+            @endforeach
+        </select>
+
+        <button wire:click="nuevo" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">+ Nuevo activo</button>
+    </div>
+
+    {{-- Tabla --}}
+    <div class="overflow-x-auto rounded-xl border border-line bg-surface">
+        <table class="w-full text-sm min-w-[680px]">
+            <thead>
+                <tr class="text-left text-xs uppercase tracking-wide text-faint bg-canvas border-b border-line">
+                    <th class="px-4 py-3">Activo</th>
+                    <th class="px-4 py-3">Código</th>
+                    <th class="px-4 py-3">Categoría</th>
+                    <th class="px-4 py-3 text-right">Costo</th>
+                    <th class="px-4 py-3">Estado</th>
+                    <th class="px-4 py-3 text-right">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse ($activos as $a)
+                    <tr class="border-b border-line last:border-0 hover:bg-canvas/60">
+                        <td class="px-4 py-3 font-medium text-ink">{{ $a->nombre }}</td>
+                        <td class="px-4 py-3 text-muted tabular-nums">{{ $a->codigo ?? '—' }}</td>
+                        <td class="px-4 py-3 text-muted">{{ $a->categoria?->nombre }}</td>
+                        <td class="px-4 py-3 text-right text-muted tabular-nums">S/ {{ number_format((float) $a->costo, 2) }}</td>
+                        <td class="px-4 py-3">
+                            @php
+                                [$clase] = match ($a->estado) {
+                                    'disponible' => ['bg-success-tint text-success'],
+                                    'asignado' => ['bg-primary-tint text-primary'],
+                                    'mantenimiento' => ['bg-warning-tint text-warning'],
+                                    'perdido' => ['bg-danger-tint text-danger'],
+                                    default => ['bg-canvas text-faint'],
+                                };
+                            @endphp
+                            <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $clase }}">
+                                <span class="w-2 h-2 rounded-full bg-current"></span>{{ $a->estado_label }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-right whitespace-nowrap">
+                            <button wire:click="editar({{ $a->id }})" class="text-primary hover:underline text-sm font-medium">Editar</button>
+                            <button wire:click="eliminar({{ $a->id }})" wire:confirm="¿Eliminar {{ $a->nombre }}?"
+                                    class="ml-3 text-danger hover:underline text-sm font-medium">Eliminar</button>
+                        </td>
+                    </tr>
+                @empty
+                    <tr><td colspan="6" class="px-4 py-8 text-center text-faint">No hay activos registrados.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-4">{{ $activos->links() }}</div>
+
+    {{-- Modal --}}
+    @if ($mostrarForm)
+        <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/40 p-4">
+            <div class="w-full max-w-xl mt-10 rounded-2xl bg-surface shadow-xl">
+                <div class="flex items-center justify-between border-b border-line px-6 py-4">
+                    <h3 class="text-lg font-semibold text-navy">{{ $editandoId ? 'Editar activo' : 'Nuevo activo' }}</h3>
+                    <button wire:click="$set('mostrarForm', false)" class="text-faint hover:text-ink text-xl leading-none">&times;</button>
+                </div>
+                <form wire:submit="guardar" class="px-6 py-5 space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="sm:col-span-2">
+                            <label class="block text-sm font-medium text-muted mb-1">Nombre *</label>
+                            <input type="text" wire:model="nombre" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                            @error('nombre') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Categoría *</label>
+                            <select wire:model="categoria_id" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                                <option value="">— Seleccionar —</option>
+                                @foreach ($categorias as $c)
+                                    <option value="{{ $c->id }}">{{ $c->nombre }}</option>
+                                @endforeach
+                            </select>
+                            @error('categoria_id') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Código / Serie</label>
+                            <input type="text" wire:model="codigo" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                            @error('codigo') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Costo (S/) *</label>
+                            <input type="number" step="0.01" min="0" wire:model="costo" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                            @error('costo') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Estado *</label>
+                            <select wire:model="estado" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                                @foreach ($estados as $val => $lbl)
+                                    <option value="{{ $val }}">{{ $lbl }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-sm font-medium text-muted mb-1">Descripción</label>
+                            <textarea wire:model="descripcion" rows="2" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary"></textarea>
+                        </div>
+                    </div>
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" wire:click="$set('mostrarForm', false)" class="rounded-lg border border-line text-muted text-sm font-semibold px-4 py-2 hover:bg-canvas">Cancelar</button>
+                        <button type="submit" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+</div>

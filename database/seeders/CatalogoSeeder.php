@@ -2,7 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\CategoriaActivo;
 use App\Models\TipoDocumento;
+use App\Models\TipoEpp;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
 
@@ -18,7 +20,7 @@ class CatalogoSeeder extends Seeder
     public function run(): void
     {
         // Roles del sistema
-        foreach (['RRHH', 'Supervisor', 'Gerencia', 'Empleado'] as $rol) {
+        foreach (['RRHH', 'Supervisor', 'Gerencia', 'Empleado', 'Contador'] as $rol) {
             Role::firstOrCreate(['name' => $rol]);
         }
 
@@ -36,6 +38,16 @@ class CatalogoSeeder extends Seeder
 
         foreach ($tipos as $t) {
             TipoDocumento::firstOrCreate(['nombre' => $t['nombre']], $t);
+        }
+
+        // Categorías de activos (retornables)
+        foreach (['Herramientas', 'Equipos electrónicos', 'Vehículos', 'Mobiliario'] as $cat) {
+            CategoriaActivo::firstOrCreate(['nombre' => $cat]);
+        }
+
+        // Tipos de EPP (consumibles)
+        foreach (['Polo', 'Botas', 'Chaleco', 'Guantes', 'Casco', 'Lentes de seguridad'] as $epp) {
+            TipoEpp::firstOrCreate(['nombre' => $epp], ['controla_talla' => in_array($epp, ['Polo', 'Botas', 'Chaleco'])]);
         }
     }
 }
