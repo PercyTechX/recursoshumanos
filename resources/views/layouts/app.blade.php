@@ -7,26 +7,87 @@
 
         <title>{{ config('app.name', 'Sistema RRHH') }}</title>
 
-        <!-- Scripts -->
+        <style>[x-cloak]{display:none!important}</style>
+
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans antialiased text-ink">
-        <div class="min-h-screen bg-canvas">
-            <livewire:layout.navigation />
+        <div x-data="{ open: false }" class="min-h-screen bg-canvas lg:flex">
 
-            <!-- Page Heading -->
-            @if (isset($header))
-                <header class="bg-white shadow">
-                    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                        {{ $header }}
+            {{-- ===== Sidebar ===== --}}
+            <aside x-cloak
+                   :class="open ? 'translate-x-0' : '-translate-x-full'"
+                   class="fixed inset-y-0 left-0 z-40 w-64 bg-navy text-white flex flex-col transition-transform duration-200 lg:translate-x-0 lg:static lg:z-auto lg:shrink-0">
+
+                {{-- Marca --}}
+                <div class="h-16 flex items-center gap-2 px-5 border-b border-white/10">
+                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-white font-bold">R</span>
+                    <span class="font-semibold tracking-tight">{{ config('app.name', 'Sistema RRHH') }}</span>
+                </div>
+
+                {{-- Navegación --}}
+                @php
+                    $itemBase = 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors';
+                    $itemOn = 'bg-white/15 text-white';
+                    $itemOff = 'text-white/70 hover:bg-white/10 hover:text-white';
+                @endphp
+                <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+                    <a href="{{ route('dashboard') }}" wire:navigate
+                       class="{{ $itemBase }} {{ request()->routeIs('dashboard') ? $itemOn : $itemOff }}">
+                        <span>🏠</span> Tablero
+                    </a>
+
+                    @hasanyrole('RRHH|Gerencia|Supervisor')
+                        <a href="{{ route('empleados.index') }}" wire:navigate
+                           class="{{ $itemBase }} {{ request()->routeIs('empleados.*') ? $itemOn : $itemOff }}">
+                            <span>👥</span> Empleados
+                        </a>
+                        <a href="{{ route('documentos.index') }}" wire:navigate
+                           class="{{ $itemBase }} {{ request()->routeIs('documentos.*') ? $itemOn : $itemOff }}">
+                            <span>📄</span> Documentos
+                        </a>
+                        <a href="{{ route('activos.index') }}" wire:navigate
+                           class="{{ $itemBase }} {{ request()->routeIs('activos.*') ? $itemOn : $itemOff }}">
+                            <span>🔧</span> Activos
+                        </a>
+                    @endhasanyrole
+                </nav>
+
+                {{-- Usuario --}}
+                <div class="border-t border-white/10 p-4">
+                    <div class="text-sm font-medium truncate">{{ auth()->user()->name }}</div>
+                    <div class="text-xs text-white/60 truncate">
+                        {{ auth()->user()->getRoleNames()->implode(', ') ?: 'Sin rol' }}
+                    </div>
+                    <div class="mt-3 flex items-center gap-4 text-sm">
+                        <a href="{{ route('profile') }}" wire:navigate class="text-white/80 hover:text-white">Perfil</a>
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit" class="text-white/80 hover:text-white">Cerrar sesión</button>
+                        </form>
+                    </div>
+                </div>
+            </aside>
+
+            {{-- Fondo oscuro al abrir en móvil --}}
+            <div x-show="open" x-cloak @click="open = false"
+                 class="fixed inset-0 z-30 bg-black/40 lg:hidden"></div>
+
+            {{-- ===== Contenido ===== --}}
+            <div class="flex-1 min-w-0">
+                <header class="bg-surface border-b border-line">
+                    <div class="h-16 flex items-center gap-3 px-4 sm:px-6 lg:px-8">
+                        <button @click="open = true" class="lg:hidden text-muted hover:text-ink text-2xl leading-none">☰</button>
+                        @isset($header)
+                            <div class="min-w-0">{{ $header }}</div>
+                        @endisset
                     </div>
                 </header>
-            @endif
 
-            <!-- Page Content -->
-            <main>
-                {{ $slot }}
-            </main>
+                <main>
+                    {{ $slot }}
+                </main>
+            </div>
         </div>
     </body>
 </html>

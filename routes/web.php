@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\DocumentoController;
 use App\Http\Controllers\EmpleadoController;
+use App\Livewire\Actions\Logout;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome');
@@ -13,6 +14,13 @@ Route::view('dashboard', 'dashboard')
 Route::view('profile', 'profile')
     ->middleware(['auth'])
     ->name('profile');
+
+// Cerrar sesión (usado por el botón del sidebar)
+Route::post('logout', function (Logout $logout) {
+    $logout();
+
+    return redirect('/');
+})->middleware('auth')->name('logout');
 
 // Módulos RRHH (acceso: RRHH, Gerencia, Supervisor)
 Route::middleware(['auth', 'role:RRHH|Gerencia|Supervisor'])->group(function () {

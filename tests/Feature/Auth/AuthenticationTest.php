@@ -60,25 +60,18 @@ class AuthenticationTest extends TestCase
 
         $this->actingAs($user);
 
-        $response = $this->get('/dashboard');
-
-        $response
+        // El layout usa un menú lateral (sidebar); comprobamos que carga.
+        $this->get('/dashboard')
             ->assertOk()
-            ->assertSeeVolt('layout.navigation');
+            ->assertSee('Tablero');
     }
 
     public function test_users_can_logout(): void
     {
         $user = User::factory()->create();
 
-        $this->actingAs($user);
-
-        $component = Volt::test('layout.navigation');
-
-        $component->call('logout');
-
-        $component
-            ->assertHasNoErrors()
+        $this->actingAs($user)
+            ->post('/logout')
             ->assertRedirect('/');
 
         $this->assertGuest();
