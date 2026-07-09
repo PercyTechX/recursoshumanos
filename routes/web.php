@@ -26,6 +26,8 @@ Route::post('logout', function (Logout $logout) {
 Route::middleware(['auth', 'role:RRHH|Gerencia|Supervisor'])->group(function () {
     Route::view('empleados', 'empleados.index')->name('empleados.index');
     Route::get('empleados/exportar', [EmpleadoController::class, 'exportar'])->name('empleados.exportar');
+    Route::get('empleados/{empleado}', fn (\App\Models\Empleado $empleado) => view('empleados.show', compact('empleado')))
+        ->name('empleados.show');
 
     Route::view('documentos', 'documentos.index')->name('documentos.index');
     Route::get('documentos/exportar', [DocumentoController::class, 'exportar'])->name('documentos.exportar');

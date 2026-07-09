@@ -172,7 +172,11 @@ new class extends Component {
             <tbody>
                 @forelse ($empleados as $e)
                     <tr class="border-b border-line last:border-0 hover:bg-canvas/60">
-                        <td class="px-4 py-3 font-medium text-ink">{{ $e->apellidos }}, {{ $e->nombres }}</td>
+                        <td class="px-4 py-3 font-medium">
+                            <a href="{{ route('empleados.show', $e) }}" wire:navigate class="text-primary hover:underline" title="Ver expediente">
+                                {{ $e->apellidos }}, {{ $e->nombres }}
+                            </a>
+                        </td>
                         <td class="px-4 py-3 text-muted tabular-nums">{{ $e->tipo_documento }} {{ $e->numero_documento }}</td>
                         <td class="px-4 py-3 text-muted">{{ $e->area?->nombre ?? '—' }}</td>
                         <td class="px-4 py-3 text-muted">{{ $e->cargo?->nombre ?? '—' }}</td>
