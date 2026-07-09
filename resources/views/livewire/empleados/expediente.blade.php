@@ -180,6 +180,9 @@ new class extends Component {
                 ->orderByDesc('fecha')->orderByDesc('id')->get(),
             'derechohabientes' => Derechohabiente::where('empleado_id', $this->empleadoId)
                 ->orderBy('tipo')->orderBy('nombres')->get(),
+            'documentosCompartidos' => $empleado->documentosCompartidos()
+                ->with('coberturas.tipoDocumento')
+                ->orderByDesc('fecha_vencimiento')->get(),
         ];
     }
 }; ?>
@@ -215,7 +218,7 @@ new class extends Component {
     @php $tabBtn = 'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors'; @endphp
     <div class="border-b border-line mb-5 flex flex-wrap gap-1">
         <button @click="tab='datos'" :class="tab==='datos' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Datos</button>
-        <button @click="tab='documentos'" :class="tab==='documentos' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Documentos ({{ $documentos->count() }})</button>
+        <button @click="tab='documentos'" :class="tab==='documentos' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Documentos ({{ $documentos->count() + $documentosCompartidos->count() }})</button>
         <button @click="tab='familia'" :class="tab==='familia' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Familia ({{ $derechohabientes->count() }})</button>
         <button @click="tab='activos'" :class="tab==='activos' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Activos ({{ $asignaciones->whereNull('fecha_devolucion')->count() }})</button>
         <button @click="tab='epp'" :class="tab==='epp' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">EPP ({{ $entregasEpp->count() }})</button>
@@ -283,21 +286,45 @@ new class extends Component {
                     <th class="px-4 py-3">Archivo</th>
                 </tr>
             </thead>
+            @php
+                $pill = fn ($estado) => match ($estado) {
+                    'vigente' => ['bg-success-tint text-success', 'Vigente'],
+                    'por_vencer' => ['bg-warning-tint text-warning', 'Por vencer'],
+                    'vencido' => ['bg-danger-tint text-danger', 'Vencido'],
+                    default => ['bg-canvas text-faint', 'Sin vigencia'],
+                };
+            @endphp
             <tbody>
+                {{-- Documentos compartidos (SCTR/pólizas que amparan a esta persona) --}}
+                @foreach ($documentosCompartidos as $dc)
+                    <tr class="border-b border-line last:border-0 bg-primary-tint/30">
+                        <td class="px-4 py-3 text-ink">
+                            {{ $dc->coberturas_texto ?: 'Documento compartido' }}
+                            <span class="ml-1 inline-flex items-center rounded-full bg-primary-tint text-primary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">Compartido</span>
+                        </td>
+                        <td class="px-4 py-3 text-muted tabular-nums">{{ optional($dc->fecha_emision)->format('d/m/Y') ?? '—' }}</td>
+                        <td class="px-4 py-3 text-muted tabular-nums">{{ optional($dc->fecha_vencimiento)->format('d/m/Y') ?? '—' }}</td>
+                        <td class="px-4 py-3">
+                            @php [$c, $t] = $pill($dc->estado); @endphp
+                            <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $c }}">
+                                <span class="w-2 h-2 rounded-full bg-current"></span>{{ $t }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            @if ($dc->archivo_path)
+                                <a href="{{ Storage::url($dc->archivo_path) }}" target="_blank" class="text-primary hover:underline">Ver</a>
+                            @else <span class="text-faint">—</span> @endif
+                        </td>
+                    </tr>
+                @endforeach
+
                 @forelse ($documentos as $d)
                     <tr class="border-b border-line last:border-0">
                         <td class="px-4 py-3 text-ink">{{ $d->tipoDocumento?->nombre }}</td>
                         <td class="px-4 py-3 text-muted tabular-nums">{{ optional($d->fecha_emision)->format('d/m/Y') ?? '—' }}</td>
                         <td class="px-4 py-3 text-muted tabular-nums">{{ optional($d->fecha_vencimiento)->format('d/m/Y') ?? '—' }}</td>
                         <td class="px-4 py-3">
-                            @php
-                                [$c, $t] = match ($d->estado) {
-                                    'vigente' => ['bg-success-tint text-success', 'Vigente'],
-                                    'por_vencer' => ['bg-warning-tint text-warning', 'Por vencer'],
-                                    'vencido' => ['bg-danger-tint text-danger', 'Vencido'],
-                                    default => ['bg-canvas text-faint', 'Sin vigencia'],
-                                };
-                            @endphp
+                            @php [$c, $t] = $pill($d->estado); @endphp
                             <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $c }}">
                                 <span class="w-2 h-2 rounded-full bg-current"></span>{{ $t }}
                             </span>
@@ -309,7 +336,9 @@ new class extends Component {
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="px-4 py-8 text-center text-faint">Sin documentos registrados.</td></tr>
+                    @if ($documentosCompartidos->isEmpty())
+                        <tr><td colspan="5" class="px-4 py-8 text-center text-faint">Sin documentos registrados.</td></tr>
+                    @endif
                 @endforelse
             </tbody>
         </table>

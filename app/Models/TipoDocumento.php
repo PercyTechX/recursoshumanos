@@ -9,10 +9,11 @@ class TipoDocumento extends Model
 {
     protected $table = 'tipos_documento';
 
-    protected $fillable = ['nombre', 'dias_aviso_previo', 'requiere_vigencia', 'activo'];
+    protected $fillable = ['nombre', 'dias_aviso_previo', 'requiere_vigencia', 'compartible', 'activo'];
 
     protected $casts = [
         'requiere_vigencia' => 'boolean',
+        'compartible' => 'boolean',
         'activo' => 'boolean',
         'dias_aviso_previo' => 'integer',
     ];
@@ -20,5 +21,11 @@ class TipoDocumento extends Model
     public function documentos(): HasMany
     {
         return $this->hasMany(Documento::class);
+    }
+
+    /** Tipos que un solo archivo puede amparar para varias personas (SCTR, homologación…). */
+    public function scopeCompartibles($query)
+    {
+        return $query->where('compartible', true)->where('activo', true);
     }
 }

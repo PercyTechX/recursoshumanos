@@ -94,6 +94,12 @@ class Empleado extends Model
         return $this->hasMany(Derechohabiente::class);
     }
 
+    /** Documentos colectivos (SCTR, pólizas) que amparan a este empleado. */
+    public function documentosCompartidos(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(DocumentoCompartido::class, 'documento_compartido_empleado');
+    }
+
     // ---- Accessors ----
     public function getNombreCompletoAttribute(): string
     {

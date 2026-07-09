@@ -8,6 +8,7 @@ use App\Models\Cargo;
 use App\Models\CategoriaActivo;
 use App\Models\Derechohabiente;
 use App\Models\Documento;
+use App\Models\DocumentoCompartido;
 use App\Models\Empleado;
 use App\Models\Sede;
 use App\Models\TipoDocumento;
@@ -128,6 +129,25 @@ class DemoSeeder extends Seeder
                     'observacion' => 'Documento de prueba',
                 ],
             );
+        }
+
+        // SCTR colectivo de ejemplo (un archivo ampara a varias personas)
+        if (DocumentoCompartido::count() === 0) {
+            $sctrSalud = $tipo['SCTR Salud'] ?? null;
+            $sctrPension = $tipo['SCTR Pensión'] ?? null;
+            $ampara = Empleado::where('situacion', 'activo')->take(6)->pluck('id');
+            if ($sctrSalud && $sctrPension && $ampara->isNotEmpty()) {
+                $dc = DocumentoCompartido::create([
+                    'fecha_emision' => now()->subDays(10)->toDateString(),
+                    'fecha_vencimiento' => now()->addDays(20)->toDateString(), // 🟡 por vencer
+                    'observacion' => 'Póliza colectiva de demostración',
+                ]);
+                $dc->coberturas()->createMany([
+                    ['tipo_documento_id' => $sctrSalud, 'aseguradora' => 'Sanitas', 'numero_poliza' => '670949'],
+                    ['tipo_documento_id' => $sctrPension, 'aseguradora' => 'Crecer', 'numero_poliza' => '9000182972'],
+                ]);
+                $dc->empleados()->sync($ampara->all());
+            }
         }
 
         // Activos de ejemplo (retornables, disponibles)

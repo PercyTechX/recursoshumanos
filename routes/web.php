@@ -33,6 +33,7 @@ Route::middleware(['auth', 'role:RRHH|Gerencia|Supervisor'])->group(function () 
 
     Route::view('documentos', 'documentos.index')->name('documentos.index');
     Route::get('documentos/exportar', [DocumentoController::class, 'exportar'])->name('documentos.exportar');
+    Route::view('documentos-compartidos', 'documentos-compartidos.index')->name('documentos-compartidos.index');
 
     Route::view('activos', 'activos.index')->name('activos.index');
 });
