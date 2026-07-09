@@ -80,6 +80,25 @@ empleado, con su lista y sus documentos.
 
 ---
 
+## Campos adicionales solicitados (registrado 2026-07-09)
+
+Pedidos por el usuario para incorporar a la ficha / derechohabientes:
+
+- **Modalidad de pago (etiqueta): Planilla vs Recibos por Honorarios.**
+  Distingue trabajador en planilla (5ta categoría) de prestador de servicios por
+  recibos por honorarios (4ta categoría). Afecta tributación/planilla.
+- **Estado de seguro** (indicador): si tiene seguro / **falta de seguro** (EsSalud
+  vigente o no).
+- **Tipo de AFP** (nombre): Integra, Prima, Profuturo, Habitat — complementa el
+  campo `sistema_pensionario` (ONP/AFP) y `cuspp`.
+- **Cantidad de hijos** (puede derivarse de los derechohabientes tipo "hijo").
+- **Datos de cónyuge e hijos**: nombres, **DNI**, fecha de nacimiento (esto es el
+  sub-módulo de **derechohabientes**).
+- **Documentos de los derechohabientes**: partida de nacimiento, DNI, etc.
+  (reusar el motor de archivos).
+
+---
+
 ## Alcance de la tarea (cuando se ejecute)
 1. Ampliar migración `empleados` (sueldo, cci, contacto de emergencia).
 2. Ampliar el formulario de alta/edición (todos los campos, agrupados en secciones).
