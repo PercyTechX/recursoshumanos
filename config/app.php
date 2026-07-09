@@ -30,6 +30,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Token de instalación (deploy sin SSH)
+    |--------------------------------------------------------------------------
+    |
+    | Habilita la ruta protegida /_setup/{token} que corre migraciones + seed
+    | de catálogos una sola vez. Se deja VACÍO en operación normal (la ruta
+    | responde 404). Se llena solo durante el despliegue y se vuelve a vaciar.
+    |
+    */
+
+    'setup_token' => env('APP_SETUP_TOKEN'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Debug Mode
     |--------------------------------------------------------------------------
     |

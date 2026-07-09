@@ -3,6 +3,7 @@
 use App\Http\Controllers\DocumentoController;
 use App\Http\Controllers\EmpleadoController;
 use App\Livewire\Actions\Logout;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome');
@@ -42,5 +43,24 @@ Route::middleware(['auth', 'role:RRHH|Gerencia|Supervisor'])->group(function () 
 Route::middleware(['auth', 'role:Contador|RRHH|Gerencia'])->group(function () {
     Route::view('descuentos', 'descuentos.index')->name('descuentos.index');
 });
+
+/*
+ | Instalación sin SSH: corre migraciones + catálogos una sola vez.
+ | Protegida por APP_SETUP_TOKEN (en .env). Si el token está vacío → 404.
+ | Tras usarla, vaciar APP_SETUP_TOKEN para que vuelva a responder 404.
+ */
+Route::get('_setup/{token}', function (string $token) {
+    $esperado = config('app.setup_token');
+    abort_unless(is_string($esperado) && $esperado !== '' && hash_equals($esperado, $token), 404);
+
+    Artisan::call('migrate', ['--force' => true]);
+    $salida = Artisan::output();
+
+    Artisan::call('db:seed', ['--class' => \Database\Seeders\CatalogoSeeder::class, '--force' => true]);
+    $salida .= Artisan::output();
+
+    return response('<pre style="font:14px/1.5 monospace;padding:16px">'.e($salida)."\n\n".
+        'LISTO. Ahora vacía APP_SETUP_TOKEN en el .env y vuelve a desplegar.</pre>');
+})->name('setup');
 
 require __DIR__.'/auth.php';

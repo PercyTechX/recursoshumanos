@@ -1,0 +1,14 @@
+---
+# Despliegue en cPanel (yachay.lat) SIN SSH.
+# Al pulsar "Deploy HEAD Commit" en Git Version Control, cPanel ejecuta estas
+# tareas dentro de la carpeta del repositorio clonado.
+#
+# El Document Root del subdominio rrhh.gds.pe debe apuntar a la carpeta /public
+# de este repositorio (ver docs/09-deploy-cpanel.md), por eso NO copiamos archivos:
+# el repo clonado ES la app desplegada.
+#
+# Única tarea necesaria: recrear el enlace storage -> storage/app/public
+# (equivale a `php artisan storage:link`, que aquí no podemos correr).
+deployment:
+  tasks:
+    - /bin/ln -sfn ../storage/app/public public/storage
