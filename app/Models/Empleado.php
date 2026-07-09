@@ -16,9 +16,11 @@ class Empleado extends Model
     protected $fillable = [
         'user_id', 'supervisor_id', 'area_id', 'cargo_id', 'sede_id',
         'tipo_documento', 'numero_documento', 'nombres', 'apellidos',
-        'fecha_nacimiento', 'nacionalidad', 'telefono', 'correo', 'direccion', 'foto',
-        'fecha_ingreso', 'tipo_contrato', 'tipo_trabajador', 'regimen_laboral',
-        'sistema_pensionario', 'cuspp', 'regimen_salud', 'banco', 'numero_cuenta',
+        'fecha_nacimiento', 'sexo', 'estado_civil', 'nacionalidad', 'telefono', 'correo', 'direccion', 'foto',
+        'emergencia_nombre', 'emergencia_parentesco', 'emergencia_telefono',
+        'fecha_ingreso', 'tipo_contrato', 'tipo_trabajador', 'regimen_laboral', 'modalidad_pago', 'sueldo',
+        'sistema_pensionario', 'cuspp', 'afp_nombre', 'regimen_salud', 'tiene_seguro',
+        'banco', 'numero_cuenta', 'cci',
         'situacion', 'fecha_cese',
     ];
 
@@ -26,6 +28,8 @@ class Empleado extends Model
         'fecha_nacimiento' => 'date',
         'fecha_ingreso' => 'date',
         'fecha_cese' => 'date',
+        'sueldo' => 'decimal:2',
+        'tiene_seguro' => 'boolean',
     ];
 
     // ---- Relaciones ----
@@ -85,9 +89,20 @@ class Empleado extends Model
         return $this->hasMany(Descuento::class);
     }
 
+    public function derechohabientes(): HasMany
+    {
+        return $this->hasMany(Derechohabiente::class);
+    }
+
     // ---- Accessors ----
     public function getNombreCompletoAttribute(): string
     {
         return trim("{$this->apellidos} {$this->nombres}");
+    }
+
+    /** Cantidad de hijos registrados como derechohabientes. */
+    public function getCantidadHijosAttribute(): int
+    {
+        return $this->derechohabientes()->where('tipo', 'hijo')->count();
     }
 }

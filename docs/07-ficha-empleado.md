@@ -1,8 +1,12 @@
-# Tarea pendiente: Ficha completa del empleado + Derechohabientes
+# Ficha completa del empleado + Derechohabientes
 
-> **Estado:** PENDIENTE. Programada **después de cerrar el módulo de activos**
-> (paso 5: hoja de ruta) y fusionarlo a `main`.
-> **Excepción:** si se van a cargar empleados reales de inmediato, se adelanta.
+> **Estado:** ✅ COMPLETADO (2026-07-09, rama `feature/ficha-empleado`).
+> - **Parte A:** formulario ampliado con todos los campos de ley + sueldo por rol.
+> - **Parte B:** sub-módulo de derechohabientes (pestaña "Familia" en el expediente
+>   con alta/edición/borrado y subida de documento) + campos extra: modalidad de
+>   pago (Planilla/Honorarios), AFP específica, estado de seguro, cantidad de hijos.
+>
+> El texto de abajo se conserva como registro del diseño.
 
 Objetivo: que la ficha del empleado capture **todos los datos que exige la ley**
 (para T-Registro / planilla) y permita registrar **derechohabientes** con sus
@@ -77,6 +81,25 @@ empleado, con su lista y sus documentos.
 - El **sueldo** y los descuentos (hoja de ruta) son la base del futuro módulo de
   **planilla / conceptos** — mantener consistencia con [06-activos.md](06-activos.md)
   y el diseño de PLAME.
+
+---
+
+## Campos adicionales solicitados (registrado 2026-07-09)
+
+Pedidos por el usuario para incorporar a la ficha / derechohabientes:
+
+- **Modalidad de pago (etiqueta): Planilla vs Recibos por Honorarios.**
+  Distingue trabajador en planilla (5ta categoría) de prestador de servicios por
+  recibos por honorarios (4ta categoría). Afecta tributación/planilla.
+- **Estado de seguro** (indicador): si tiene seguro / **falta de seguro** (EsSalud
+  vigente o no).
+- **Tipo de AFP** (nombre): Integra, Prima, Profuturo, Habitat — complementa el
+  campo `sistema_pensionario` (ONP/AFP) y `cuspp`.
+- **Cantidad de hijos** (puede derivarse de los derechohabientes tipo "hijo").
+- **Datos de cónyuge e hijos**: nombres, **DNI**, fecha de nacimiento (esto es el
+  sub-módulo de **derechohabientes**).
+- **Documentos de los derechohabientes**: partida de nacimiento, DNI, etc.
+  (reusar el motor de archivos).
 
 ---
 
