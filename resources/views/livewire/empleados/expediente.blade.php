@@ -4,6 +4,7 @@ use App\Models\Asignacion;
 use App\Models\Documento;
 use App\Models\Empleado;
 use App\Models\EntregaEpp;
+use App\Models\HojaRuta;
 use App\Models\TipoEpp;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Volt\Component;
@@ -84,6 +85,8 @@ new class extends Component {
                 ->where('empleado_id', $this->empleadoId)
                 ->orderByDesc('fecha')->orderByDesc('id')->get(),
             'tiposEpp' => TipoEpp::where('activo', true)->orderBy('nombre')->get(),
+            'hojasRuta' => HojaRuta::where('empleado_id', $this->empleadoId)
+                ->orderByDesc('fecha')->orderByDesc('id')->get(),
         ];
     }
 }; ?>
@@ -122,6 +125,7 @@ new class extends Component {
         <button @click="tab='documentos'" :class="tab==='documentos' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Documentos ({{ $documentos->count() }})</button>
         <button @click="tab='activos'" :class="tab==='activos' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Activos ({{ $asignaciones->whereNull('fecha_devolucion')->count() }})</button>
         <button @click="tab='epp'" :class="tab==='epp' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">EPP ({{ $entregasEpp->count() }})</button>
+        <button @click="tab='hojas'" :class="tab==='hojas' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Hojas de ruta ({{ $hojasRuta->count() }})</button>
     </div>
 
     {{-- DATOS --}}
@@ -266,6 +270,36 @@ new class extends Component {
                 </tbody>
             </table>
         </div>
+    </section>
+
+    {{-- HOJAS DE RUTA --}}
+    <section x-show="tab==='hojas'" x-cloak class="bg-surface border border-line rounded-xl overflow-x-auto">
+        <table class="w-full text-sm min-w-[520px]">
+            <thead>
+                <tr class="text-left text-xs uppercase tracking-wide text-faint bg-canvas border-b border-line">
+                    <th class="px-4 py-3">Fecha</th>
+                    <th class="px-4 py-3">Motivo</th>
+                    <th class="px-4 py-3 text-right">Total descontado</th>
+                    <th class="px-4 py-3">PDF</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse ($hojasRuta as $h)
+                    <tr class="border-b border-line last:border-0">
+                        <td class="px-4 py-3 text-muted tabular-nums">{{ optional($h->fecha)->format('d/m/Y') }}</td>
+                        <td class="px-4 py-3 text-ink capitalize">{{ $h->motivo }}</td>
+                        <td class="px-4 py-3 text-right tabular-nums">S/ {{ number_format((float) $h->total_descuento, 2) }}</td>
+                        <td class="px-4 py-3">
+                            @if ($h->pdf_path)
+                                <a href="{{ Storage::url($h->pdf_path) }}" target="_blank" class="text-primary hover:underline">Descargar</a>
+                            @else <span class="text-faint">—</span> @endif
+                        </td>
+                    </tr>
+                @empty
+                    <tr><td colspan="4" class="px-4 py-8 text-center text-faint">Sin hojas de ruta.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
     </section>
 
     {{-- Modal: Entregar EPP --}}

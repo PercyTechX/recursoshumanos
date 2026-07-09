@@ -7,6 +7,7 @@ use App\Models\Asignacion;
 use App\Models\CategoriaActivo;
 use App\Models\Descuento;
 use App\Models\Empleado;
+use App\Models\HojaRuta;
 use App\Models\User;
 use Database\Seeders\CatalogoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -51,6 +52,11 @@ class HojaRutaTest extends TestCase
         ]);
         $this->assertSame('perdido', $activo->fresh()->estado);
         $this->assertNotNull($asig->fresh()->fecha_devolucion);
+
+        // Se generó el PDF
+        $hoja = HojaRuta::first();
+        $this->assertNotNull($hoja->pdf_path);
+        Storage::disk('public')->assertExists($hoja->pdf_path);
     }
 
     public function test_hoja_de_ruta_devuelto_no_genera_descuento(): void

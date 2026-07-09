@@ -6,6 +6,7 @@ use App\Models\Descuento;
 use App\Models\Empleado;
 use App\Models\HojaRuta;
 use App\Models\HojaRutaItem;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Volt\Component;
 
@@ -115,6 +116,12 @@ new class extends Component {
                 ]);
             }
         }
+
+        // Genera el PDF (resumen firmado) y lo guarda
+        $hoja->load(['empleado', 'items.activo']);
+        $pdfPath = 'hojas_ruta/hoja_'.$hoja->id.'.pdf';
+        Storage::disk('public')->put($pdfPath, Pdf::loadView('pdf.hoja-ruta', ['hoja' => $hoja])->output());
+        $hoja->update(['pdf_path' => $pdfPath]);
 
         session()->flash('ok', 'Hoja de ruta generada. Los descuentos quedaron registrados para el Contador.');
 
