@@ -44,6 +44,7 @@ Detalle y justificación en [docs/01-stack-tecnologico.md](docs/01-stack-tecnolo
 | [docs/04-ui-diseno.md](docs/04-ui-diseno.md) | Estilo visual (modo claro, inspirado en Docker), paleta/tokens y componentes. |
 | [docs/05-despliegue.md](docs/05-despliegue.md) | Estrategia de despliegue **sin SSH** (GitHub → cPanel Git, `vendor`/build incluidos). |
 | [docs/06-activos.md](docs/06-activos.md) | Control de **activos/EPP**, hoja de ruta, descuentos y expediente del empleado. |
+| [docs/07-ficha-empleado.md](docs/07-ficha-empleado.md) | **Pendiente**: ficha completa del empleado (sueldo, CCI, etc.) + derechohabientes. |
 
 ---
 

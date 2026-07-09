@@ -13,6 +13,9 @@ sistema funciona y aporta valor. No se pasa a la siguiente sin cerrar la anterio
 - 🔼 **Reprioritización:** por necesidad del negocio, el **Control de Activos/EPP +
   la ficha/Expediente del empleado** se adelanta y pasa a ser la **siguiente fase**
   (antes estaba en "futuro"). Detalle completo en [06-activos.md](06-activos.md).
+- 📝 **Registrado (después de activos):** **Ficha completa del empleado** (sueldo, CCI,
+  contacto de emergencia, régimen, etc. — lo que exige la ley) + **derechohabientes**.
+  Detalle en [07-ficha-empleado.md](07-ficha-empleado.md).
 - ⏬ **Vacaciones** y **planilla** se posponen hasta after de activos.
 
 ---
