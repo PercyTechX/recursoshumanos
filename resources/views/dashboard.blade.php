@@ -22,11 +22,13 @@
 
             {{-- Resumen del semáforo (datos reales) --}}
             @php
-                // Cuenta solo el documento ACTUAL de cada requisito (no el historial)
+                // Cuenta el documento ACTUAL de cada requisito (individual) + los
+                // documentos compartidos (SCTR/pólizas), contados por persona × cobertura.
                 $r = \App\Models\Documento::resumenSemaforo();
-                $vig = $r['vigente'];
-                $porV = $r['por_vencer'];
-                $venc = $r['vencido'];
+                $rc = \App\Models\DocumentoCompartido::resumenSemaforo();
+                $vig = $r['vigente'] + $rc['vigente'];
+                $porV = $r['por_vencer'] + $rc['por_vencer'];
+                $venc = $r['vencido'] + $rc['vencido'];
             @endphp
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <a href="{{ route('documentos.index', ['filtroEstado' => 'vigente']) }}"

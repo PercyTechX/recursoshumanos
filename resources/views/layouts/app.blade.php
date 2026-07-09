@@ -43,8 +43,12 @@
                             <span>👥</span> Empleados
                         </a>
                         <a href="{{ route('documentos.index') }}" wire:navigate
-                           class="{{ $itemBase }} {{ request()->routeIs('documentos.*') ? $itemOn : $itemOff }}">
+                           class="{{ $itemBase }} {{ request()->routeIs('documentos.index') || request()->routeIs('documentos.exportar') ? $itemOn : $itemOff }}">
                             <span>📄</span> Documentos
+                        </a>
+                        <a href="{{ route('documentos-compartidos.index') }}" wire:navigate
+                           class="{{ $itemBase }} {{ request()->routeIs('documentos-compartidos.*') ? $itemOn : $itemOff }}">
+                            <span>📋</span> Doc. compartidos
                         </a>
                         <a href="{{ route('activos.index') }}" wire:navigate
                            class="{{ $itemBase }} {{ request()->routeIs('activos.*') ? $itemOn : $itemOff }}">
