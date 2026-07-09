@@ -1,8 +1,12 @@
-# Tarea pendiente: Ficha completa del empleado + Derechohabientes
+# Ficha completa del empleado + Derechohabientes
 
-> **Estado:** PENDIENTE. Programada **después de cerrar el módulo de activos**
-> (paso 5: hoja de ruta) y fusionarlo a `main`.
-> **Excepción:** si se van a cargar empleados reales de inmediato, se adelanta.
+> **Estado:** ✅ COMPLETADO (2026-07-09, rama `feature/ficha-empleado`).
+> - **Parte A:** formulario ampliado con todos los campos de ley + sueldo por rol.
+> - **Parte B:** sub-módulo de derechohabientes (pestaña "Familia" en el expediente
+>   con alta/edición/borrado y subida de documento) + campos extra: modalidad de
+>   pago (Planilla/Honorarios), AFP específica, estado de seguro, cantidad de hijos.
+>
+> El texto de abajo se conserva como registro del diseño.
 
 Objetivo: que la ficha del empleado capture **todos los datos que exige la ley**
 (para T-Registro / planilla) y permita registrar **derechohabientes** con sus

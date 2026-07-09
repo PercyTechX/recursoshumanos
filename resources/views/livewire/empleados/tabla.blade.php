@@ -46,10 +46,13 @@ new class extends Component {
     public string $tipo_trabajador = '';
     public string $regimen_laboral = '';
     // Planilla
+    public string $modalidad_pago = '';
     public string $sueldo = '';
     public string $sistema_pensionario = '';
     public string $cuspp = '';
+    public string $afp_nombre = '';
     public string $regimen_salud = 'EsSalud';
+    public string $tiene_seguro = '';
     // Bancario
     public string $banco = '';
     public string $numero_cuenta = '';
@@ -87,10 +90,13 @@ new class extends Component {
             'tipo_contrato' => ['nullable', 'string', 'max:60'],
             'tipo_trabajador' => ['nullable', 'string', 'max:60'],
             'regimen_laboral' => ['nullable', 'string', 'max:60'],
+            'modalidad_pago' => ['nullable', 'in:planilla,honorarios'],
             'sueldo' => ['nullable', 'numeric', 'min:0'],
             'sistema_pensionario' => ['nullable', 'string', 'max:20'],
             'cuspp' => ['nullable', 'string', 'max:40'],
+            'afp_nombre' => ['nullable', 'string', 'max:40'],
             'regimen_salud' => ['nullable', 'string', 'max:40'],
+            'tiene_seguro' => ['nullable', 'in:0,1'],
             'banco' => ['nullable', 'string', 'max:60'],
             'numero_cuenta' => ['nullable', 'string', 'max:40'],
             'cci' => ['nullable', 'string', 'max:25'],
@@ -130,10 +136,13 @@ new class extends Component {
         $this->tipo_contrato = $e->tipo_contrato ?? '';
         $this->tipo_trabajador = $e->tipo_trabajador ?? '';
         $this->regimen_laboral = $e->regimen_laboral ?? '';
+        $this->modalidad_pago = $e->modalidad_pago ?? '';
         $this->sueldo = $this->puedeVerSueldo() ? (string) ($e->sueldo ?? '') : '';
         $this->sistema_pensionario = $e->sistema_pensionario ?? '';
         $this->cuspp = $e->cuspp ?? '';
+        $this->afp_nombre = $e->afp_nombre ?? '';
         $this->regimen_salud = $e->regimen_salud ?? '';
+        $this->tiene_seguro = $e->tiene_seguro === null ? '' : ($e->tiene_seguro ? '1' : '0');
         $this->banco = $e->banco ?? '';
         $this->numero_cuenta = $e->numero_cuenta ?? '';
         $this->cci = $e->cci ?? '';
@@ -182,7 +191,8 @@ new class extends Component {
             'sexo', 'estado_civil', 'telefono', 'correo', 'direccion',
             'emergencia_nombre', 'emergencia_parentesco', 'emergencia_telefono',
             'area_id', 'cargo_id', 'sede_id', 'fecha_ingreso', 'tipo_contrato', 'tipo_trabajador',
-            'regimen_laboral', 'sueldo', 'sistema_pensionario', 'cuspp', 'banco', 'numero_cuenta', 'cci',
+            'regimen_laboral', 'modalidad_pago', 'sueldo', 'sistema_pensionario', 'cuspp', 'afp_nombre',
+            'tiene_seguro', 'banco', 'numero_cuenta', 'cci',
             'fecha_cese',
         ]);
         $this->tipo_documento = 'DNI';
@@ -452,6 +462,15 @@ new class extends Component {
                         <div class="sm:col-span-2 border-t border-line pt-3 mt-1">
                             <span class="text-xs font-semibold uppercase tracking-wide text-primary">Planilla</span>
                         </div>
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Modalidad de pago</label>
+                            <select wire:model="modalidad_pago" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                                <option value="">—</option>
+                                <option value="planilla">Planilla (5ta categoría)</option>
+                                <option value="honorarios">Recibos por honorarios (4ta categoría)</option>
+                            </select>
+                            @error('modalidad_pago') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                        </div>
                         @if ($this->puedeVerSueldo())
                             <div>
                                 <label class="block text-sm font-medium text-muted mb-1">Sueldo (S/)</label>
@@ -468,12 +487,30 @@ new class extends Component {
                             </select>
                         </div>
                         <div>
+                            <label class="block text-sm font-medium text-muted mb-1">AFP</label>
+                            <select wire:model="afp_nombre" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                                <option value="">—</option>
+                                <option value="Integra">Integra</option>
+                                <option value="Prima">Prima</option>
+                                <option value="Profuturo">Profuturo</option>
+                                <option value="Habitat">Habitat</option>
+                            </select>
+                        </div>
+                        <div>
                             <label class="block text-sm font-medium text-muted mb-1">CUSPP (AFP)</label>
                             <input type="text" wire:model="cuspp" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-muted mb-1">Régimen de salud</label>
                             <input type="text" wire:model="regimen_salud" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Estado de seguro</label>
+                            <select wire:model="tiene_seguro" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                                <option value="">— No registrado —</option>
+                                <option value="1">Con seguro (EsSalud vigente)</option>
+                                <option value="0">Sin seguro / falta de seguro</option>
+                            </select>
                         </div>
 
                         {{-- Sección: Bancario --}}

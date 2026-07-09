@@ -6,6 +6,7 @@ use App\Models\Activo;
 use App\Models\Area;
 use App\Models\Cargo;
 use App\Models\CategoriaActivo;
+use App\Models\Derechohabiente;
 use App\Models\Documento;
 use App\Models\Empleado;
 use App\Models\Sede;
@@ -68,8 +69,29 @@ class DemoSeeder extends Seeder
                     'situacion' => $situacion,
                     'correo' => strtolower(explode(' ', $nombres)[0]).'@empresa.test',
                     'telefono' => '9'.rand(10000000, 99999999),
+                    'modalidad_pago' => $situacion === 'cesado' ? 'planilla' : (rand(0, 3) ? 'planilla' : 'honorarios'),
+                    'sistema_pensionario' => rand(0, 1) ? 'AFP' : 'ONP',
+                    'afp_nombre' => rand(0, 1) ? 'Integra' : 'Prima',
+                    'regimen_salud' => 'EsSalud',
+                    'tiene_seguro' => (bool) rand(0, 1),
                 ],
             );
+        }
+
+        // Derechohabientes de ejemplo (familia de Juan Carlos Pérez)
+        $juan = Empleado::where('numero_documento', '12345678')->first();
+        if ($juan) {
+            $familia = [
+                ['conyuge', 'Lucía', 'Ramos Gil', 'DNI', '41222333', '1990-05-12', 'esposa'],
+                ['hijo', 'Mateo', 'Pérez Ramos', 'DNI', '75111222', '2015-08-01', 'hijo'],
+                ['hijo', 'Valentina', 'Pérez Ramos', 'PARTIDA', null, '2019-03-20', 'hija'],
+            ];
+            foreach ($familia as [$tipo, $nom, $ape, $td, $nd, $fnac, $paren]) {
+                Derechohabiente::firstOrCreate(
+                    ['empleado_id' => $juan->id, 'nombres' => $nom, 'apellidos' => $ape],
+                    ['tipo' => $tipo, 'tipo_documento' => $td, 'numero_documento' => $nd, 'fecha_nacimiento' => $fnac, 'parentesco' => $paren],
+                );
+            }
         }
 
         // Documentos de ejemplo (cubren los 3 estados del semáforo)
