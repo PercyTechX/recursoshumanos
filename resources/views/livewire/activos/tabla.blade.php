@@ -45,6 +45,9 @@ new class extends Component {
     public string $devObservacion = '';
     public string $firmaDevolucion = '';
 
+    // Historial (trazabilidad del activo)
+    public ?int $historialId = null;
+
     protected function rules(): array
     {
         return [
@@ -171,6 +174,11 @@ new class extends Component {
         session()->flash('ok', 'Devolución registrada.');
     }
 
+    public function verHistorial(int $activoId): void
+    {
+        $this->historialId = $activoId;
+    }
+
     public function resetForm(): void
     {
         $this->reset(['editandoId', 'categoria_id', 'nombre', 'codigo', 'costo', 'descripcion']);
@@ -195,11 +203,20 @@ new class extends Component {
             ->orderBy('nombre')
             ->paginate(10);
 
+        // Historial de trazabilidad del activo seleccionado
+        $historial = $this->historialId
+            ? Asignacion::with('empleado')
+                ->where('activo_id', $this->historialId)
+                ->orderByDesc('fecha_entrega')->orderByDesc('id')->get()
+            : collect();
+
         return [
             'activos' => $activos,
             'categorias' => CategoriaActivo::where('activo', true)->orderBy('nombre')->get(),
             'estados' => Activo::ESTADOS,
             'empleados' => Empleado::where('situacion', 'activo')->orderBy('apellidos')->get(),
+            'historial' => $historial,
+            'historialActivo' => $this->historialId ? Activo::find($this->historialId) : null,
         ];
     }
 }; ?>
@@ -251,7 +268,11 @@ new class extends Component {
             <tbody>
                 @forelse ($activos as $a)
                     <tr class="border-b border-line last:border-0 hover:bg-canvas/60">
-                        <td class="px-4 py-3 font-medium text-ink">{{ $a->nombre }}</td>
+                        <td class="px-4 py-3 font-medium">
+                            <button wire:click="verHistorial({{ $a->id }})" class="text-primary hover:underline text-left" title="Ver trazabilidad (quién lo tuvo)">
+                                {{ $a->nombre }}
+                            </button>
+                        </td>
                         <td class="px-4 py-3 text-muted tabular-nums">{{ $a->codigo ?? '—' }}</td>
                         <td class="px-4 py-3 text-muted">{{ $a->categoria?->nombre }}</td>
                         <td class="px-4 py-3 text-right text-muted tabular-nums">S/ {{ number_format((float) $a->costo, 2) }}</td>
@@ -420,6 +441,52 @@ new class extends Component {
                         <button type="submit" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">Registrar devolución</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    @endif
+
+    {{-- Modal: Trazabilidad del activo --}}
+    @if ($historialId && $historialActivo)
+        <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/40 p-4">
+            <div class="w-full max-w-xl mt-10 rounded-2xl bg-surface shadow-xl">
+                <div class="flex items-center justify-between border-b border-line px-6 py-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-navy">Trazabilidad</h3>
+                        <p class="text-xs text-muted">{{ $historialActivo->nombre }} @if ($historialActivo->codigo) · {{ $historialActivo->codigo }} @endif</p>
+                    </div>
+                    <button wire:click="$set('historialId', null)" class="text-faint hover:text-ink text-xl leading-none">&times;</button>
+                </div>
+                <div class="px-6 py-5">
+                    @forelse ($historial as $h)
+                        <div class="flex gap-3 pb-4 last:pb-0">
+                            <div class="flex flex-col items-center">
+                                <span class="w-2.5 h-2.5 rounded-full {{ $h->esta_activa ? 'bg-primary' : 'bg-line' }} mt-1.5"></span>
+                                @if (! $loop->last)<span class="flex-1 w-px bg-line"></span>@endif
+                            </div>
+                            <div class="flex-1 pb-1">
+                                <div class="font-medium text-ink">{{ $h->empleado?->apellidos }}, {{ $h->empleado?->nombres }}</div>
+                                <div class="text-sm text-muted">
+                                    Entregado: {{ optional($h->fecha_entrega)->format('d/m/Y') }}
+                                </div>
+                                @if ($h->esta_activa)
+                                    <span class="inline-flex items-center gap-1.5 mt-1 rounded-full bg-primary-tint text-primary px-2.5 py-0.5 text-xs font-semibold">
+                                        <span class="w-2 h-2 rounded-full bg-current"></span>En su poder
+                                    </span>
+                                @else
+                                    <div class="text-sm text-muted">
+                                        Devuelto: {{ optional($h->fecha_devolucion)->format('d/m/Y') }}
+                                        @if ($h->estado_devolucion) · <span class="capitalize">{{ $h->estado_devolucion }}</span> @endif
+                                    </div>
+                                @endif
+                                @if ($h->observacion)
+                                    <div class="text-xs text-faint mt-0.5">{{ $h->observacion }}</div>
+                                @endif
+                            </div>
+                        </div>
+                    @empty
+                        <p class="text-center text-faint py-6">Este activo aún no ha sido asignado a nadie.</p>
+                    @endforelse
+                </div>
             </div>
         </div>
     @endif

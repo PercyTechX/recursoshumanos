@@ -71,6 +71,29 @@ class AsignacionesTest extends TestCase
         $this->assertNotNull(Asignacion::first()->fecha_devolucion);
     }
 
+    public function test_ver_historial_muestra_quienes_lo_tuvieron(): void
+    {
+        Storage::fake('public');
+        $this->seed(CatalogoSeeder::class);
+        $user = User::factory()->create();
+        $user->assignRole('RRHH');
+        $this->actingAs($user);
+
+        $empleado = Empleado::create(['numero_documento' => '33334444', 'nombres' => 'Ana', 'apellidos' => 'Torres']);
+        $activo = Activo::create(['categoria_id' => CategoriaActivo::first()->id, 'nombre' => 'Taladro', 'costo' => 300, 'estado' => 'disponible']);
+
+        Volt::test('activos.tabla')
+            ->set('asignarId', $activo->id)
+            ->set('asignEmpleadoId', $empleado->id)
+            ->set('firmaEntrega', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==')
+            ->call('asignar');
+
+        Volt::test('activos.tabla')
+            ->call('verHistorial', $activo->id)
+            ->assertSet('historialId', $activo->id)
+            ->assertSee('Torres');
+    }
+
     public function test_asignar_requiere_empleado_y_firma(): void
     {
         $this->seed(CatalogoSeeder::class);
