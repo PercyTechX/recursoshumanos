@@ -51,6 +51,13 @@
                             <span>🔧</span> Activos
                         </a>
                     @endhasanyrole
+
+                    @hasanyrole('Contador|RRHH|Gerencia')
+                        <a href="{{ route('descuentos.index') }}" wire:navigate
+                           class="{{ $itemBase }} {{ request()->routeIs('descuentos.*') ? $itemOn : $itemOff }}">
+                            <span>💸</span> Descuentos
+                        </a>
+                    @endhasanyrole
                 </nav>
 
                 {{-- Usuario --}}

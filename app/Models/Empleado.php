@@ -75,6 +75,16 @@ class Empleado extends Model
         return $this->hasMany(EntregaEpp::class);
     }
 
+    public function hojasRuta(): HasMany
+    {
+        return $this->hasMany(HojaRuta::class);
+    }
+
+    public function descuentos(): HasMany
+    {
+        return $this->hasMany(Descuento::class);
+    }
+
     // ---- Accessors ----
     public function getNombreCompletoAttribute(): string
     {
