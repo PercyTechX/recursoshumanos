@@ -33,6 +33,7 @@ new class extends Component {
     public string $telefono = '';
     public string $correo = '';
     public string $situacion = 'activo';
+    public string $fecha_cese = '';
 
     protected function rules(): array
     {
@@ -48,6 +49,7 @@ new class extends Component {
             'telefono' => ['nullable', 'string', 'max:30'],
             'correo' => ['nullable', 'email', 'max:120'],
             'situacion' => ['required', 'in:activo,cesado'],
+            'fecha_cese' => ['nullable', 'date', 'required_if:situacion,cesado'],
         ];
     }
 
@@ -61,17 +63,30 @@ new class extends Component {
     {
         $e = Empleado::findOrFail($id);
         $this->editandoId = $e->id;
-        $this->fill($e->only([
-            'tipo_documento', 'numero_documento', 'nombres', 'apellidos',
-            'area_id', 'cargo_id', 'sede_id', 'telefono', 'correo', 'situacion',
-        ]));
+        $this->tipo_documento = $e->tipo_documento ?? 'DNI';
+        $this->numero_documento = $e->numero_documento ?? '';
+        $this->nombres = $e->nombres ?? '';
+        $this->apellidos = $e->apellidos ?? '';
+        $this->area_id = $e->area_id;
+        $this->cargo_id = $e->cargo_id;
+        $this->sede_id = $e->sede_id;
+        $this->telefono = $e->telefono ?? '';
+        $this->correo = $e->correo ?? '';
+        $this->situacion = $e->situacion ?? 'activo';
         $this->fecha_ingreso = optional($e->fecha_ingreso)->format('Y-m-d') ?? '';
+        $this->fecha_cese = optional($e->fecha_cese)->format('Y-m-d') ?? '';
         $this->mostrarForm = true;
     }
 
     public function guardar(): void
     {
         $data = $this->validate();
+
+        // Si está activo, no debe quedar fecha de cese
+        if ($data['situacion'] !== 'cesado') {
+            $data['fecha_cese'] = null;
+        }
+
         Empleado::updateOrCreate(['id' => $this->editandoId], $data);
         $this->mostrarForm = false;
         $this->resetForm();
@@ -88,7 +103,7 @@ new class extends Component {
     {
         $this->reset([
             'editandoId', 'numero_documento', 'nombres', 'apellidos',
-            'area_id', 'cargo_id', 'sede_id', 'fecha_ingreso', 'telefono', 'correo',
+            'area_id', 'cargo_id', 'sede_id', 'fecha_ingreso', 'telefono', 'correo', 'fecha_cese',
         ]);
         $this->tipo_documento = 'DNI';
         $this->situacion = 'activo';
@@ -289,11 +304,18 @@ new class extends Component {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-muted mb-1">Situación</label>
-                            <select wire:model="situacion" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                            <select wire:model.live="situacion" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
                                 <option value="activo">Activo</option>
                                 <option value="cesado">Cesado</option>
                             </select>
                         </div>
+                        @if ($situacion === 'cesado')
+                            <div>
+                                <label class="block text-sm font-medium text-muted mb-1">Fecha de cese *</label>
+                                <input type="date" wire:model="fecha_cese" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                                @error('fecha_cese') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                            </div>
+                        @endif
                     </div>
 
                     <div class="flex justify-end gap-2 pt-2">
