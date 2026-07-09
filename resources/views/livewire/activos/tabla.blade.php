@@ -1,7 +1,10 @@
 <?php
 
 use App\Models\Activo;
+use App\Models\Asignacion;
 use App\Models\CategoriaActivo;
+use App\Models\Empleado;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
@@ -29,6 +32,18 @@ new class extends Component {
     public string $costo = '';
     public string $estado = 'disponible';
     public string $descripcion = '';
+
+    // Asignar
+    public ?int $asignarId = null;
+    public ?int $asignEmpleadoId = null;
+    public string $firmaEntrega = '';
+    public string $asignObservacion = '';
+
+    // Devolver
+    public ?int $devolverId = null;
+    public string $devEstado = 'bueno';
+    public string $devObservacion = '';
+    public string $firmaDevolucion = '';
 
     protected function rules(): array
     {
@@ -72,6 +87,90 @@ new class extends Component {
         session()->flash('ok', 'Activo eliminado.');
     }
 
+    // ---- Asignar / Devolver ----
+
+    private function guardarFirma(string $dataUrl, string $carpeta): ?string
+    {
+        if (! str_starts_with($dataUrl, 'data:image')) {
+            return null;
+        }
+        $base64 = explode(',', $dataUrl, 2)[1] ?? '';
+        $path = $carpeta.'/'.uniqid('firma_').'.png';
+        Storage::disk('public')->put($path, base64_decode($base64));
+
+        return $path;
+    }
+
+    public function abrirAsignar(int $activoId): void
+    {
+        $this->reset(['asignEmpleadoId', 'firmaEntrega', 'asignObservacion']);
+        $this->resetErrorBag();
+        $this->asignarId = $activoId;
+    }
+
+    public function asignar(): void
+    {
+        $this->validate([
+            'asignEmpleadoId' => ['required', 'exists:empleados,id'],
+            'firmaEntrega' => ['required', 'string'],
+        ], [], ['asignEmpleadoId' => 'empleado', 'firmaEntrega' => 'firma']);
+
+        Asignacion::create([
+            'activo_id' => $this->asignarId,
+            'empleado_id' => $this->asignEmpleadoId,
+            'fecha_entrega' => now()->toDateString(),
+            'firma_entrega_path' => $this->guardarFirma($this->firmaEntrega, 'firmas'),
+            'entregado_por' => auth()->id(),
+            'observacion' => $this->asignObservacion ?: null,
+        ]);
+
+        Activo::whereKey($this->asignarId)->update(['estado' => Activo::ASIGNADO]);
+
+        $this->asignarId = null;
+        session()->flash('ok', 'Activo asignado correctamente.');
+    }
+
+    public function abrirDevolver(int $activoId): void
+    {
+        $this->reset(['devEstado', 'devObservacion', 'firmaDevolucion']);
+        $this->devEstado = 'bueno';
+        $this->resetErrorBag();
+        $this->devolverId = $activoId;
+    }
+
+    public function devolver(): void
+    {
+        $this->validate([
+            'devEstado' => ['required', 'in:bueno,dañado,perdido'],
+        ]);
+
+        $asignacion = Asignacion::where('activo_id', $this->devolverId)
+            ->whereNull('fecha_devolucion')
+            ->latest('id')
+            ->first();
+
+        if ($asignacion) {
+            $asignacion->update([
+                'fecha_devolucion' => now()->toDateString(),
+                'estado_devolucion' => $this->devEstado,
+                'firma_devolucion_path' => $this->firmaDevolucion ? $this->guardarFirma($this->firmaDevolucion, 'firmas') : null,
+                'recibido_por' => auth()->id(),
+                'observacion' => trim(($asignacion->observacion ? $asignacion->observacion.' | ' : '').$this->devObservacion) ?: $asignacion->observacion,
+            ]);
+        }
+
+        // Nuevo estado del activo según cómo volvió
+        $nuevoEstado = match ($this->devEstado) {
+            'dañado' => Activo::MANTENIMIENTO,
+            'perdido' => Activo::PERDIDO,
+            default => Activo::DISPONIBLE,
+        };
+        Activo::whereKey($this->devolverId)->update(['estado' => $nuevoEstado]);
+
+        $this->devolverId = null;
+        session()->flash('ok', 'Devolución registrada.');
+    }
+
     public function resetForm(): void
     {
         $this->reset(['editandoId', 'categoria_id', 'nombre', 'codigo', 'costo', 'descripcion']);
@@ -87,7 +186,7 @@ new class extends Component {
     public function with(): array
     {
         $activos = Activo::query()
-            ->with('categoria')
+            ->with(['categoria', 'asignacionActiva.empleado'])
             ->when($this->buscar, fn ($q) => $q->where(fn ($w) => $w
                 ->where('nombre', 'like', '%'.$this->buscar.'%')
                 ->orWhere('codigo', 'like', '%'.$this->buscar.'%')))
@@ -100,6 +199,7 @@ new class extends Component {
             'activos' => $activos,
             'categorias' => CategoriaActivo::where('activo', true)->orderBy('nombre')->get(),
             'estados' => Activo::ESTADOS,
+            'empleados' => Empleado::where('situacion', 'activo')->orderBy('apellidos')->get(),
         ];
     }
 }; ?>
@@ -144,6 +244,7 @@ new class extends Component {
                     <th class="px-4 py-3">Categoría</th>
                     <th class="px-4 py-3 text-right">Costo</th>
                     <th class="px-4 py-3">Estado</th>
+                    <th class="px-4 py-3">Asignado a</th>
                     <th class="px-4 py-3 text-right">Acciones</th>
                 </tr>
             </thead>
@@ -168,14 +269,26 @@ new class extends Component {
                                 <span class="w-2 h-2 rounded-full bg-current"></span>{{ $a->estado_label }}
                             </span>
                         </td>
+                        <td class="px-4 py-3 text-muted">
+                            @if ($a->estado === 'asignado' && $a->asignacionActiva?->empleado)
+                                {{ $a->asignacionActiva->empleado->apellidos }}, {{ $a->asignacionActiva->empleado->nombres }}
+                            @else
+                                <span class="text-faint">—</span>
+                            @endif
+                        </td>
                         <td class="px-4 py-3 text-right whitespace-nowrap">
-                            <button wire:click="editar({{ $a->id }})" class="text-primary hover:underline text-sm font-medium">Editar</button>
+                            @if ($a->estado === 'disponible')
+                                <button wire:click="abrirAsignar({{ $a->id }})" class="text-primary hover:underline text-sm font-semibold">Asignar</button>
+                            @elseif ($a->estado === 'asignado')
+                                <button wire:click="abrirDevolver({{ $a->id }})" class="text-warning hover:underline text-sm font-semibold">Devolver</button>
+                            @endif
+                            <button wire:click="editar({{ $a->id }})" class="ml-3 text-primary hover:underline text-sm font-medium">Editar</button>
                             <button wire:click="eliminar({{ $a->id }})" wire:confirm="¿Eliminar {{ $a->nombre }}?"
                                     class="ml-3 text-danger hover:underline text-sm font-medium">Eliminar</button>
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="px-4 py-8 text-center text-faint">No hay activos registrados.</td></tr>
+                    <tr><td colspan="7" class="px-4 py-8 text-center text-faint">No hay activos registrados.</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -234,6 +347,77 @@ new class extends Component {
                     <div class="flex justify-end gap-2 pt-2">
                         <button type="button" wire:click="$set('mostrarForm', false)" class="rounded-lg border border-line text-muted text-sm font-semibold px-4 py-2 hover:bg-canvas">Cancelar</button>
                         <button type="submit" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+
+    {{-- Modal: Asignar --}}
+    @if ($asignarId)
+        <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/40 p-4">
+            <div class="w-full max-w-lg mt-10 rounded-2xl bg-surface shadow-xl">
+                <div class="flex items-center justify-between border-b border-line px-6 py-4">
+                    <h3 class="text-lg font-semibold text-navy">Asignar activo</h3>
+                    <button wire:click="$set('asignarId', null)" class="text-faint hover:text-ink text-xl leading-none">&times;</button>
+                </div>
+                <form wire:submit="asignar" class="px-6 py-5 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-muted mb-1">Empleado *</label>
+                        <select wire:model="asignEmpleadoId" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                            <option value="">— Seleccionar —</option>
+                            @foreach ($empleados as $e)
+                                <option value="{{ $e->id }}">{{ $e->apellidos }}, {{ $e->nombres }}</option>
+                            @endforeach
+                        </select>
+                        @error('asignEmpleadoId') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-muted mb-1">Observación</label>
+                        <input type="text" wire:model="asignObservacion" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-muted mb-1">Firma de recepción *</label>
+                        <x-firma model="firmaEntrega" />
+                        @error('firmaEntrega') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                    </div>
+                    <div class="flex justify-end gap-2 pt-1">
+                        <button type="button" wire:click="$set('asignarId', null)" class="rounded-lg border border-line text-muted text-sm font-semibold px-4 py-2 hover:bg-canvas">Cancelar</button>
+                        <button type="submit" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">Asignar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+
+    {{-- Modal: Devolver --}}
+    @if ($devolverId)
+        <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/40 p-4">
+            <div class="w-full max-w-lg mt-10 rounded-2xl bg-surface shadow-xl">
+                <div class="flex items-center justify-between border-b border-line px-6 py-4">
+                    <h3 class="text-lg font-semibold text-navy">Registrar devolución</h3>
+                    <button wire:click="$set('devolverId', null)" class="text-faint hover:text-ink text-xl leading-none">&times;</button>
+                </div>
+                <form wire:submit="devolver" class="px-6 py-5 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-muted mb-1">¿En qué estado vuelve? *</label>
+                        <select wire:model="devEstado" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                            <option value="bueno">Bueno → vuelve a disponible</option>
+                            <option value="dañado">Dañado → pasa a mantenimiento</option>
+                            <option value="perdido">Perdido / no devuelto → pasa a perdido</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-muted mb-1">Observación</label>
+                        <input type="text" wire:model="devObservacion" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-muted mb-1">Firma (opcional)</label>
+                        <x-firma model="firmaDevolucion" />
+                    </div>
+                    <div class="flex justify-end gap-2 pt-1">
+                        <button type="button" wire:click="$set('devolverId', null)" class="rounded-lg border border-line text-muted text-sm font-semibold px-4 py-2 hover:bg-canvas">Cancelar</button>
+                        <button type="submit" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">Registrar devolución</button>
                     </div>
                 </form>
             </div>

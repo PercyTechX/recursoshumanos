@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Activo extends Model
 {
@@ -31,6 +33,17 @@ class Activo extends Model
     public function categoria(): BelongsTo
     {
         return $this->belongsTo(CategoriaActivo::class, 'categoria_id');
+    }
+
+    public function asignaciones(): HasMany
+    {
+        return $this->hasMany(Asignacion::class);
+    }
+
+    /** La asignación vigente (sin devolver), si existe. */
+    public function asignacionActiva(): HasOne
+    {
+        return $this->hasOne(Asignacion::class)->whereNull('fecha_devolucion')->latestOfMany();
     }
 
     public function getEstadoLabelAttribute(): string

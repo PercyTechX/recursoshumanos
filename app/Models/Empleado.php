@@ -59,6 +59,22 @@ class Empleado extends Model
         return $this->belongsTo(Sede::class);
     }
 
+    public function asignaciones(): HasMany
+    {
+        return $this->hasMany(Asignacion::class);
+    }
+
+    /** Activos que tiene en su poder ahora (sin devolver). */
+    public function asignacionesActivas(): HasMany
+    {
+        return $this->hasMany(Asignacion::class)->whereNull('fecha_devolucion');
+    }
+
+    public function entregasEpp(): HasMany
+    {
+        return $this->hasMany(EntregaEpp::class);
+    }
+
     // ---- Accessors ----
     public function getNombreCompletoAttribute(): string
     {
