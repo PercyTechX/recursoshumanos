@@ -16,9 +16,10 @@ class Empleado extends Model
     protected $fillable = [
         'user_id', 'supervisor_id', 'area_id', 'cargo_id', 'sede_id',
         'tipo_documento', 'numero_documento', 'nombres', 'apellidos',
-        'fecha_nacimiento', 'nacionalidad', 'telefono', 'correo', 'direccion', 'foto',
-        'fecha_ingreso', 'tipo_contrato', 'tipo_trabajador', 'regimen_laboral',
-        'sistema_pensionario', 'cuspp', 'regimen_salud', 'banco', 'numero_cuenta',
+        'fecha_nacimiento', 'sexo', 'estado_civil', 'nacionalidad', 'telefono', 'correo', 'direccion', 'foto',
+        'emergencia_nombre', 'emergencia_parentesco', 'emergencia_telefono',
+        'fecha_ingreso', 'tipo_contrato', 'tipo_trabajador', 'regimen_laboral', 'sueldo',
+        'sistema_pensionario', 'cuspp', 'regimen_salud', 'banco', 'numero_cuenta', 'cci',
         'situacion', 'fecha_cese',
     ];
 
@@ -26,6 +27,7 @@ class Empleado extends Model
         'fecha_nacimiento' => 'date',
         'fecha_ingreso' => 'date',
         'fecha_cese' => 'date',
+        'sueldo' => 'decimal:2',
     ];
 
     // ---- Relaciones ----

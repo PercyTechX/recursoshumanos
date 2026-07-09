@@ -26,14 +26,42 @@ new class extends Component {
     public string $numero_documento = '';
     public string $nombres = '';
     public string $apellidos = '';
+    public string $fecha_nacimiento = '';
+    public string $sexo = '';
+    public string $estado_civil = '';
+    public string $nacionalidad = 'Peruana';
+    public string $telefono = '';
+    public string $correo = '';
+    public string $direccion = '';
+    // Contacto de emergencia
+    public string $emergencia_nombre = '';
+    public string $emergencia_parentesco = '';
+    public string $emergencia_telefono = '';
+    // Laboral
     public ?int $area_id = null;
     public ?int $cargo_id = null;
     public ?int $sede_id = null;
     public string $fecha_ingreso = '';
-    public string $telefono = '';
-    public string $correo = '';
+    public string $tipo_contrato = '';
+    public string $tipo_trabajador = '';
+    public string $regimen_laboral = '';
+    // Planilla
+    public string $sueldo = '';
+    public string $sistema_pensionario = '';
+    public string $cuspp = '';
+    public string $regimen_salud = 'EsSalud';
+    // Bancario
+    public string $banco = '';
+    public string $numero_cuenta = '';
+    public string $cci = '';
+    // Estado
     public string $situacion = 'activo';
     public string $fecha_cese = '';
+
+    public function puedeVerSueldo(): bool
+    {
+        return auth()->user()?->hasAnyRole(['RRHH', 'Gerencia', 'Contador']) ?? false;
+    }
 
     protected function rules(): array
     {
@@ -42,12 +70,30 @@ new class extends Component {
             'numero_documento' => ['required', 'string', 'max:20', Rule::unique('empleados', 'numero_documento')->ignore($this->editandoId)],
             'nombres' => ['required', 'string', 'max:120'],
             'apellidos' => ['required', 'string', 'max:120'],
+            'fecha_nacimiento' => ['nullable', 'date'],
+            'sexo' => ['nullable', 'in:M,F'],
+            'estado_civil' => ['nullable', 'string', 'max:20'],
+            'nacionalidad' => ['nullable', 'string', 'max:40'],
+            'telefono' => ['nullable', 'string', 'max:30'],
+            'correo' => ['nullable', 'email', 'max:120'],
+            'direccion' => ['nullable', 'string', 'max:200'],
+            'emergencia_nombre' => ['nullable', 'string', 'max:120'],
+            'emergencia_parentesco' => ['nullable', 'string', 'max:40'],
+            'emergencia_telefono' => ['nullable', 'string', 'max:30'],
             'area_id' => ['nullable', 'exists:areas,id'],
             'cargo_id' => ['nullable', 'exists:cargos,id'],
             'sede_id' => ['nullable', 'exists:sedes,id'],
             'fecha_ingreso' => ['nullable', 'date'],
-            'telefono' => ['nullable', 'string', 'max:30'],
-            'correo' => ['nullable', 'email', 'max:120'],
+            'tipo_contrato' => ['nullable', 'string', 'max:60'],
+            'tipo_trabajador' => ['nullable', 'string', 'max:60'],
+            'regimen_laboral' => ['nullable', 'string', 'max:60'],
+            'sueldo' => ['nullable', 'numeric', 'min:0'],
+            'sistema_pensionario' => ['nullable', 'string', 'max:20'],
+            'cuspp' => ['nullable', 'string', 'max:40'],
+            'regimen_salud' => ['nullable', 'string', 'max:40'],
+            'banco' => ['nullable', 'string', 'max:60'],
+            'numero_cuenta' => ['nullable', 'string', 'max:40'],
+            'cci' => ['nullable', 'string', 'max:25'],
             'situacion' => ['required', 'in:activo,cesado'],
             'fecha_cese' => ['nullable', 'date', 'required_if:situacion,cesado'],
         ];
@@ -67,13 +113,31 @@ new class extends Component {
         $this->numero_documento = $e->numero_documento ?? '';
         $this->nombres = $e->nombres ?? '';
         $this->apellidos = $e->apellidos ?? '';
+        $this->fecha_nacimiento = optional($e->fecha_nacimiento)->format('Y-m-d') ?? '';
+        $this->sexo = $e->sexo ?? '';
+        $this->estado_civil = $e->estado_civil ?? '';
+        $this->nacionalidad = $e->nacionalidad ?? '';
+        $this->telefono = $e->telefono ?? '';
+        $this->correo = $e->correo ?? '';
+        $this->direccion = $e->direccion ?? '';
+        $this->emergencia_nombre = $e->emergencia_nombre ?? '';
+        $this->emergencia_parentesco = $e->emergencia_parentesco ?? '';
+        $this->emergencia_telefono = $e->emergencia_telefono ?? '';
         $this->area_id = $e->area_id;
         $this->cargo_id = $e->cargo_id;
         $this->sede_id = $e->sede_id;
-        $this->telefono = $e->telefono ?? '';
-        $this->correo = $e->correo ?? '';
-        $this->situacion = $e->situacion ?? 'activo';
         $this->fecha_ingreso = optional($e->fecha_ingreso)->format('Y-m-d') ?? '';
+        $this->tipo_contrato = $e->tipo_contrato ?? '';
+        $this->tipo_trabajador = $e->tipo_trabajador ?? '';
+        $this->regimen_laboral = $e->regimen_laboral ?? '';
+        $this->sueldo = $this->puedeVerSueldo() ? (string) ($e->sueldo ?? '') : '';
+        $this->sistema_pensionario = $e->sistema_pensionario ?? '';
+        $this->cuspp = $e->cuspp ?? '';
+        $this->regimen_salud = $e->regimen_salud ?? '';
+        $this->banco = $e->banco ?? '';
+        $this->numero_cuenta = $e->numero_cuenta ?? '';
+        $this->cci = $e->cci ?? '';
+        $this->situacion = $e->situacion ?? 'activo';
         $this->fecha_cese = optional($e->fecha_cese)->format('Y-m-d') ?? '';
         $this->mostrarForm = true;
     }
@@ -85,6 +149,18 @@ new class extends Component {
         // Si está activo, no debe quedar fecha de cese
         if ($data['situacion'] !== 'cesado') {
             $data['fecha_cese'] = null;
+        }
+
+        // Normaliza cadenas vacías a null
+        foreach ($data as $k => $v) {
+            if ($v === '') {
+                $data[$k] = null;
+            }
+        }
+
+        // El sueldo solo lo actualiza quien tiene permiso (no lo pisan los Supervisores)
+        if (! $this->puedeVerSueldo()) {
+            unset($data['sueldo']);
         }
 
         Empleado::updateOrCreate(['id' => $this->editandoId], $data);
@@ -102,10 +178,16 @@ new class extends Component {
     public function resetForm(): void
     {
         $this->reset([
-            'editandoId', 'numero_documento', 'nombres', 'apellidos',
-            'area_id', 'cargo_id', 'sede_id', 'fecha_ingreso', 'telefono', 'correo', 'fecha_cese',
+            'editandoId', 'numero_documento', 'nombres', 'apellidos', 'fecha_nacimiento',
+            'sexo', 'estado_civil', 'telefono', 'correo', 'direccion',
+            'emergencia_nombre', 'emergencia_parentesco', 'emergencia_telefono',
+            'area_id', 'cargo_id', 'sede_id', 'fecha_ingreso', 'tipo_contrato', 'tipo_trabajador',
+            'regimen_laboral', 'sueldo', 'sistema_pensionario', 'cuspp', 'banco', 'numero_cuenta', 'cci',
+            'fecha_cese',
         ]);
         $this->tipo_documento = 'DNI';
+        $this->nacionalidad = 'Peruana';
+        $this->regimen_salud = 'EsSalud';
         $this->situacion = 'activo';
         $this->resetErrorBag();
     }
@@ -229,7 +311,7 @@ new class extends Component {
     {{-- Modal de formulario --}}
     @if ($mostrarForm)
         <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/40 p-4">
-            <div class="w-full max-w-2xl mt-10 rounded-2xl bg-surface shadow-xl">
+            <div class="w-full max-w-3xl mt-10 mb-10 rounded-2xl bg-surface shadow-xl">
                 <div class="flex items-center justify-between border-b border-line px-6 py-4">
                     <h3 class="text-lg font-semibold text-navy">
                         {{ $editandoId ? 'Editar empleado' : 'Nuevo empleado' }}
@@ -263,6 +345,31 @@ new class extends Component {
                             @error('apellidos') <span class="text-danger text-xs">{{ $message }}</span> @enderror
                         </div>
                         <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Fecha de nacimiento</label>
+                            <input type="date" wire:model="fecha_nacimiento" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Sexo</label>
+                            <select wire:model="sexo" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                                <option value="">—</option>
+                                <option value="M">Masculino</option>
+                                <option value="F">Femenino</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Estado civil</label>
+                            <input type="text" wire:model="estado_civil" placeholder="Soltero(a), Casado(a)…" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Nacionalidad</label>
+                            <input type="text" wire:model="nacionalidad" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                        </div>
+
+                        {{-- Sección: Laboral --}}
+                        <div class="sm:col-span-2 border-t border-line pt-3 mt-1">
+                            <span class="text-xs font-semibold uppercase tracking-wide text-primary">Datos laborales</span>
+                        </div>
+                        <div>
                             <label class="block text-sm font-medium text-muted mb-1">Área</label>
                             <select wire:model="area_id" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
                                 <option value="">— Seleccionar —</option>
@@ -294,6 +401,23 @@ new class extends Component {
                             <input type="date" wire:model="fecha_ingreso" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
                         </div>
                         <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Tipo de contrato</label>
+                            <input type="text" wire:model="tipo_contrato" placeholder="Indefinido, Plazo fijo…" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Tipo de trabajador</label>
+                            <input type="text" wire:model="tipo_trabajador" placeholder="Empleado, Practicante…" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Régimen laboral</label>
+                            <input type="text" wire:model="regimen_laboral" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                        </div>
+
+                        {{-- Sección: Contacto --}}
+                        <div class="sm:col-span-2 border-t border-line pt-3 mt-1">
+                            <span class="text-xs font-semibold uppercase tracking-wide text-primary">Contacto</span>
+                        </div>
+                        <div>
                             <label class="block text-sm font-medium text-muted mb-1">Teléfono</label>
                             <input type="text" wire:model="telefono" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
                         </div>
@@ -301,6 +425,78 @@ new class extends Component {
                             <label class="block text-sm font-medium text-muted mb-1">Correo</label>
                             <input type="email" wire:model="correo" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
                             @error('correo') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-sm font-medium text-muted mb-1">Dirección</label>
+                            <input type="text" wire:model="direccion" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                        </div>
+
+                        {{-- Sección: Contacto de emergencia --}}
+                        <div class="sm:col-span-2 border-t border-line pt-3 mt-1">
+                            <span class="text-xs font-semibold uppercase tracking-wide text-primary">Contacto de emergencia</span>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Nombre</label>
+                            <input type="text" wire:model="emergencia_nombre" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Parentesco</label>
+                            <input type="text" wire:model="emergencia_parentesco" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Teléfono</label>
+                            <input type="text" wire:model="emergencia_telefono" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                        </div>
+
+                        {{-- Sección: Planilla --}}
+                        <div class="sm:col-span-2 border-t border-line pt-3 mt-1">
+                            <span class="text-xs font-semibold uppercase tracking-wide text-primary">Planilla</span>
+                        </div>
+                        @if ($this->puedeVerSueldo())
+                            <div>
+                                <label class="block text-sm font-medium text-muted mb-1">Sueldo (S/)</label>
+                                <input type="number" step="0.01" min="0" wire:model="sueldo" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                                @error('sueldo') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                            </div>
+                        @endif
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Sistema pensionario</label>
+                            <select wire:model="sistema_pensionario" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                                <option value="">—</option>
+                                <option value="ONP">ONP</option>
+                                <option value="AFP">AFP</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">CUSPP (AFP)</label>
+                            <input type="text" wire:model="cuspp" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Régimen de salud</label>
+                            <input type="text" wire:model="regimen_salud" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                        </div>
+
+                        {{-- Sección: Bancario --}}
+                        <div class="sm:col-span-2 border-t border-line pt-3 mt-1">
+                            <span class="text-xs font-semibold uppercase tracking-wide text-primary">Datos bancarios</span>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Banco</label>
+                            <input type="text" wire:model="banco" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">N° de cuenta</label>
+                            <input type="text" wire:model="numero_cuenta" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">CCI (interbancaria)</label>
+                            <input type="text" wire:model="cci" placeholder="20 dígitos" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                            @error('cci') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                        </div>
+
+                        {{-- Sección: Estado --}}
+                        <div class="sm:col-span-2 border-t border-line pt-3 mt-1">
+                            <span class="text-xs font-semibold uppercase tracking-wide text-primary">Estado</span>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-muted mb-1">Situación</label>

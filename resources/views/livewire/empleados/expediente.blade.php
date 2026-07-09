@@ -132,21 +132,33 @@ new class extends Component {
     <section x-show="tab==='datos'" class="bg-surface border border-line rounded-xl p-6">
         <dl class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4 text-sm">
             @php
+                $emerg = collect([$empleado->emergencia_nombre, $empleado->emergencia_parentesco, $empleado->emergencia_telefono])->filter()->implode(' · ');
                 $campos = [
                     'Fecha de nacimiento' => optional($empleado->fecha_nacimiento)->format('d/m/Y'),
+                    'Sexo' => $empleado->sexo === 'M' ? 'Masculino' : ($empleado->sexo === 'F' ? 'Femenino' : null),
+                    'Estado civil' => $empleado->estado_civil,
                     'Nacionalidad' => $empleado->nacionalidad,
                     'Teléfono' => $empleado->telefono,
                     'Correo' => $empleado->correo,
                     'Dirección' => $empleado->direccion,
+                    'Contacto de emergencia' => $emerg ?: null,
                     'Sede' => $empleado->sede?->nombre,
                     'Supervisor' => $empleado->supervisor ? $empleado->supervisor->apellidos.', '.$empleado->supervisor->nombres : null,
                     'Fecha de ingreso' => optional($empleado->fecha_ingreso)->format('d/m/Y'),
                     'Tipo de contrato' => $empleado->tipo_contrato,
+                    'Tipo de trabajador' => $empleado->tipo_trabajador,
+                    'Régimen laboral' => $empleado->regimen_laboral,
                     'Sistema pensionario' => $empleado->sistema_pensionario,
+                    'CUSPP' => $empleado->cuspp,
                     'Régimen de salud' => $empleado->regimen_salud,
                     'Banco' => $empleado->banco,
                     'N° de cuenta' => $empleado->numero_cuenta,
+                    'CCI' => $empleado->cci,
+                    'Fecha de cese' => optional($empleado->fecha_cese)->format('d/m/Y'),
                 ];
+                if (auth()->user()->hasAnyRole(['RRHH', 'Gerencia', 'Contador'])) {
+                    $campos['Sueldo'] = $empleado->sueldo ? 'S/ '.number_format((float) $empleado->sueldo, 2) : null;
+                }
             @endphp
             @foreach ($campos as $label => $valor)
                 <div>
