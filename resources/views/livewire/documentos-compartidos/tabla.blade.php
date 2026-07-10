@@ -181,8 +181,8 @@ new class extends Component {
         <p class="text-sm text-muted">
             Un solo archivo (SCTR, póliza, homologación) que ampara a <strong>varias personas</strong> a la vez.
         </p>
-        <button wire:click="nuevo" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
-            + Nuevo documento compartido
+        <button wire:click="nuevo" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
+            <x-icon name="plus" class="w-4 h-4" /> Nuevo documento compartido
         </button>
     </div>
 
@@ -221,13 +221,24 @@ new class extends Component {
                         <td class="px-4 py-3 text-center tabular-nums font-semibold text-ink">{{ $d->empleados_count }}</td>
                         <td class="px-4 py-3">
                             @if ($d->archivo_path)
-                                <a href="{{ Storage::url($d->archivo_path) }}" target="_blank" class="text-primary hover:underline">Ver</a>
+                                <a href="{{ Storage::url($d->archivo_path) }}" target="_blank" class="inline-flex items-center gap-1 text-primary hover:underline" title="Ver archivo">
+                                    <x-icon name="eye" class="w-4 h-4" /> Ver
+                                </a>
                             @else <span class="text-faint">—</span> @endif
                         </td>
-                        <td class="px-4 py-3 text-right whitespace-nowrap">
-                            <button wire:click="renovar({{ $d->id }})" class="text-success hover:underline text-sm font-medium" title="Crear la póliza del siguiente periodo con el mismo grupo">Renovar</button>
-                            <button wire:click="editar({{ $d->id }})" class="ml-3 text-primary hover:underline text-sm font-medium">Editar</button>
-                            <button wire:click="eliminar({{ $d->id }})" wire:confirm="¿Eliminar este documento compartido?" class="ml-3 text-danger hover:underline text-sm font-medium">Eliminar</button>
+                        <td class="px-4 py-3">
+                            <div class="inline-flex items-center gap-1 justify-end w-full">
+                                @php $btn = 'inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-canvas transition-colors'; @endphp
+                                <button wire:click="renovar({{ $d->id }})" class="{{ $btn }} text-success" title="Renovar (siguiente periodo, mismo grupo)">
+                                    <x-icon name="refresh" />
+                                </button>
+                                <button wire:click="editar({{ $d->id }})" class="{{ $btn }} text-primary" title="Editar">
+                                    <x-icon name="pencil" />
+                                </button>
+                                <button wire:click="eliminar({{ $d->id }})" wire:confirm="¿Eliminar este documento compartido?" class="{{ $btn }} text-danger" title="Eliminar">
+                                    <x-icon name="trash" />
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 @empty

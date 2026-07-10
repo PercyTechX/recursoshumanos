@@ -230,7 +230,7 @@ new class extends Component {
             <option value="rechazada">Rechazadas</option>
             <option value="cancelada">Canceladas</option>
         </select>
-        <button wire:click="nuevo" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">+ Nueva solicitud</button>
+        <button wire:click="nuevo" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2"><x-icon name="plus" class="w-4 h-4" /> Nueva solicitud</button>
     </div>
 
     <div class="overflow-x-auto rounded-xl border border-line bg-surface">
@@ -274,24 +274,31 @@ new class extends Component {
                                 <div class="text-faint text-xs mt-0.5">{{ $s->comentario_decision }}</div>
                             @endif
                         </td>
-                        <td class="px-4 py-3 text-right whitespace-nowrap">
-                            @if ($s->estado === 'pendiente')
-                                @if ($this->puedeDecidir())
-                                    <button wire:click="aprobar({{ $s->id }})" wire:confirm="¿Aprobar estas vacaciones? Se descontarán del saldo." class="text-success hover:underline text-sm font-medium">Aprobar</button>
-                                    <button wire:click="abrirRechazo({{ $s->id }})" class="ml-3 text-danger hover:underline text-sm font-medium">Rechazar</button>
-                                @endif
-                                <button wire:click="cancelar({{ $s->id }})" wire:confirm="¿Cancelar esta solicitud?" class="ml-3 text-muted hover:underline text-sm font-medium">Cancelar</button>
-                            @elseif ($s->estado === 'aprobada')
-                                @if ($this->puedeDecidir() && ! $s->interrumpida)
-                                    <button wire:click="abrirRetorno({{ $s->id }})" class="text-warning hover:underline text-sm font-medium" title="La empresa lo hizo volver antes">Retorno anticipado</button>
+                        <td class="px-4 py-3">
+                            <div class="inline-flex items-center gap-1 justify-end w-full">
+                                @php $btn = 'inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-canvas transition-colors'; @endphp
+                                @if ($s->estado === 'pendiente')
+                                    @if ($this->puedeDecidir())
+                                        <button wire:click="aprobar({{ $s->id }})" wire:confirm="¿Aprobar estas vacaciones? Se descontarán del saldo." class="{{ $btn }} text-success" title="Aprobar">
+                                            <x-icon name="check" />
+                                        </button>
+                                        <button wire:click="abrirRechazo({{ $s->id }})" class="{{ $btn }} text-danger" title="Rechazar">
+                                            <x-icon name="x" />
+                                        </button>
+                                    @endif
+                                    <button wire:click="cancelar({{ $s->id }})" wire:confirm="¿Cancelar esta solicitud?" class="{{ $btn }} text-muted" title="Cancelar solicitud">
+                                        <x-icon name="ban" />
+                                    </button>
+                                @elseif ($s->estado === 'aprobada' && $this->puedeDecidir() && ! $s->interrumpida)
+                                    <button wire:click="abrirRetorno({{ $s->id }})" class="{{ $btn }} text-warning" title="Retorno anticipado (la empresa lo hizo volver antes)">
+                                        <x-icon name="return" />
+                                    </button>
                                 @elseif ($s->interrumpida)
                                     <span class="text-warning text-xs font-medium">Interrumpida</span>
                                 @else
                                     <span class="text-faint text-xs">{{ $s->decididaPor?->name ? 'por '.$s->decididaPor->name : '—' }}</span>
                                 @endif
-                            @else
-                                <span class="text-faint text-xs">{{ $s->decididaPor?->name ? 'por '.$s->decididaPor->name : '—' }}</span>
-                            @endif
+                            </div>
                         </td>
                     </tr>
                 @empty

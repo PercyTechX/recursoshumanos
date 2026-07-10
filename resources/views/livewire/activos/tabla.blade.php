@@ -248,7 +248,7 @@ new class extends Component {
             @endforeach
         </select>
 
-        <button wire:click="nuevo" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">+ Nuevo activo</button>
+        <button wire:click="nuevo" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2"><x-icon name="plus" class="w-4 h-4" /> Nuevo activo</button>
     </div>
 
     {{-- Tabla --}}
@@ -297,15 +297,29 @@ new class extends Component {
                                 <span class="text-faint">—</span>
                             @endif
                         </td>
-                        <td class="px-4 py-3 text-right whitespace-nowrap">
-                            @if ($a->estado === 'disponible')
-                                <button wire:click="abrirAsignar({{ $a->id }})" class="text-primary hover:underline text-sm font-semibold">Asignar</button>
-                            @elseif ($a->estado === 'asignado')
-                                <button wire:click="abrirDevolver({{ $a->id }})" class="text-warning hover:underline text-sm font-semibold">Devolver</button>
-                            @endif
-                            <button wire:click="editar({{ $a->id }})" class="ml-3 text-primary hover:underline text-sm font-medium">Editar</button>
-                            <button wire:click="eliminar({{ $a->id }})" wire:confirm="¿Eliminar {{ $a->nombre }}?"
-                                    class="ml-3 text-danger hover:underline text-sm font-medium">Eliminar</button>
+                        <td class="px-4 py-3">
+                            <div class="inline-flex items-center gap-1 justify-end w-full">
+                                @php $btn = 'inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-canvas transition-colors'; @endphp
+                                @if ($a->estado === 'disponible')
+                                    <button wire:click="abrirAsignar({{ $a->id }})" class="{{ $btn }} text-primary" title="Asignar a un empleado">
+                                        <x-icon name="user-plus" />
+                                    </button>
+                                @elseif ($a->estado === 'asignado')
+                                    <button wire:click="abrirDevolver({{ $a->id }})" class="{{ $btn }} text-warning" title="Registrar devolución">
+                                        <x-icon name="return" />
+                                    </button>
+                                @endif
+                                <button wire:click="verHistorial({{ $a->id }})" class="{{ $btn }} text-muted hover:text-primary" title="Trazabilidad">
+                                    <x-icon name="history" />
+                                </button>
+                                <button wire:click="editar({{ $a->id }})" class="{{ $btn }} text-primary" title="Editar">
+                                    <x-icon name="pencil" />
+                                </button>
+                                <button wire:click="eliminar({{ $a->id }})" wire:confirm="¿Eliminar {{ $a->nombre }}?"
+                                        class="{{ $btn }} text-danger" title="Eliminar">
+                                    <x-icon name="trash" />
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 @empty

@@ -400,7 +400,7 @@ new class extends Component {
     {{-- FAMILIA (derechohabientes) --}}
     <section x-show="tab==='familia'" x-cloak>
         <div class="flex justify-end mb-3">
-            <button wire:click="abrirDh" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">+ Agregar familiar</button>
+            <button wire:click="abrirDh" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2"><x-icon name="plus" class="w-4 h-4" /> Agregar familiar</button>
         </div>
         <div class="bg-surface border border-line rounded-xl overflow-x-auto">
             <table class="w-full text-sm min-w-[640px]">
@@ -427,8 +427,15 @@ new class extends Component {
                                 @else <span class="text-faint">—</span> @endif
                             </td>
                             <td class="px-4 py-3 text-right whitespace-nowrap">
-                                <button wire:click="abrirDh({{ $dh->id }})" class="text-primary hover:underline text-sm font-medium">Editar</button>
-                                <button wire:click="eliminarDh({{ $dh->id }})" wire:confirm="¿Eliminar a {{ $dh->nombres }}?" class="ml-3 text-danger hover:underline text-sm font-medium">Eliminar</button>
+                                <div class="inline-flex items-center gap-1 justify-end w-full">
+                                    @php $btnDh = 'inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-canvas transition-colors'; @endphp
+                                    <button wire:click="abrirDh({{ $dh->id }})" class="{{ $btnDh }} text-primary" title="Editar">
+                                        <x-icon name="pencil" />
+                                    </button>
+                                    <button wire:click="eliminarDh({{ $dh->id }})" wire:confirm="¿Eliminar a {{ $dh->nombres }}?" class="{{ $btnDh }} text-danger" title="Eliminar">
+                                        <x-icon name="trash" />
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     @empty
@@ -476,7 +483,7 @@ new class extends Component {
     {{-- EPP --}}
     <section x-show="tab==='epp'" x-cloak>
         <div class="flex justify-end mb-3">
-            <button wire:click="abrirEpp" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">+ Entregar EPP</button>
+            <button wire:click="abrirEpp" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2"><x-icon name="plus" class="w-4 h-4" /> Entregar EPP</button>
         </div>
         <div class="bg-surface border border-line rounded-xl overflow-x-auto">
             <table class="w-full text-sm min-w-[520px]">
@@ -520,7 +527,7 @@ new class extends Component {
                 </div>
             </div>
             @if ($this->puedeGestionarVacaciones())
-                <button wire:click="abrirMov" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">+ Registrar movimiento</button>
+                <button wire:click="abrirMov" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2"><x-icon name="plus" class="w-4 h-4" /> Registrar movimiento</button>
             @endif
         </div>
 
