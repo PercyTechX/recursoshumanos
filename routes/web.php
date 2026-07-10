@@ -16,6 +16,12 @@ Route::view('profile', 'profile')
     ->middleware(['auth'])
     ->name('profile');
 
+// Portal del trabajador (autoservicio) — cualquier usuario autenticado;
+// el componente muestra solo los datos del empleado vinculado.
+Route::view('mi-espacio', 'portal.index')
+    ->middleware(['auth'])
+    ->name('portal.index');
+
 // Cerrar sesión (usado por el botón del sidebar)
 Route::post('logout', function (Logout $logout) {
     $logout();

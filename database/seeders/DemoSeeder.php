@@ -13,7 +13,9 @@ use App\Models\DocumentoCompartido;
 use App\Models\Empleado;
 use App\Models\Sede;
 use App\Models\TipoDocumento;
+use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 /**
  * Datos de PRUEBA (desechables).
@@ -162,6 +164,17 @@ class DemoSeeder extends Seeder
                 ]);
                 $dc->empleados()->sync($ampara->all());
             }
+        }
+
+        // Usuario-trabajador de ejemplo (para probar el portal del trabajador)
+        $juanId = $ids['12345678'] ?? null;
+        if ($juanId) {
+            $tecnico = User::firstOrCreate(
+                ['email' => 'tecnico@empresa.test'],
+                ['name' => 'Juan Carlos Pérez', 'password' => Hash::make('password')],
+            );
+            $tecnico->syncRoles(['Empleado']);
+            Empleado::whereKey($juanId)->update(['user_id' => $tecnico->id]);
         }
 
         // Ausencia de ejemplo (descanso médico)

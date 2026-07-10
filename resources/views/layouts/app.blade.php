@@ -36,6 +36,12 @@
                        class="{{ $itemBase }} {{ request()->routeIs('dashboard') ? $itemOn : $itemOff }}">
                         <x-icon name="home" class="w-5 h-5 shrink-0" /> Tablero
                     </a>
+                    @if (auth()->user()->empleado)
+                        <a href="{{ route('portal.index') }}" wire:navigate
+                           class="{{ $itemBase }} {{ request()->routeIs('portal.*') ? $itemOn : $itemOff }}">
+                            <x-icon name="user" class="w-5 h-5 shrink-0" /> Mi espacio
+                        </a>
+                    @endif
 
                     @can('empleados.ver')
                         <a href="{{ route('empleados.index') }}" wire:navigate
