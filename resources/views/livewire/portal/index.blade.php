@@ -5,6 +5,9 @@ use App\Models\Documento;
 use App\Models\Marcacion;
 use App\Models\MovimientoVacaciones;
 use App\Models\SolicitudVacaciones;
+use App\Models\Ticket;
+use App\Models\TicketAvance;
+use App\Models\TicketTecnico;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Volt\Component;
 
@@ -43,6 +46,105 @@ new class extends Component {
         ]);
 
         session()->flash('ok', ($tipo === Marcacion::INGRESO ? 'Ingreso' : 'Salida').' registrada correctamente.');
+    }
+
+    // ---- Operación de tickets ----
+
+    private function jornadaAbiertaAhora(): bool
+    {
+        $u = Marcacion::where('empleado_id', $this->empleadoId)->orderByDesc('fecha_hora')->orderByDesc('id')->first();
+
+        return $u && $u->tipo === Marcacion::INGRESO;
+    }
+
+    private function ticketActivoDelEmpleado(): ?TicketTecnico
+    {
+        return TicketTecnico::where('empleado_id', $this->empleadoId)
+            ->whereIn('estado_trabajo', TicketTecnico::ACTIVOS)
+            ->with(['ticket.cliente', 'ticket.sucursal', 'ticket.sede'])
+            ->first();
+    }
+
+    private function registrarAvance(TicketTecnico $tt, string $estado, ?float $lat, ?float $lng, ?float $precision, ?bool $dentro): void
+    {
+        TicketAvance::create([
+            'ticket_tecnico_id' => $tt->id,
+            'estado' => $estado,
+            'fecha_hora' => now(),
+            'latitud' => $lat,
+            'longitud' => $lng,
+            'precision_m' => $precision,
+            'dentro_geocerca' => $dentro,
+        ]);
+    }
+
+    public function tomarTicket(int $ticketId, float $lat, float $lng, ?float $precision = null): void
+    {
+        abort_if($this->empleadoId === null, 403);
+
+        if (! $this->jornadaAbiertaAhora()) {
+            session()->flash('error', 'Debes marcar tu ingreso antes de tomar un ticket.');
+
+            return;
+        }
+        if ($this->ticketActivoDelEmpleado()) {
+            session()->flash('error', 'Ya tienes un ticket activo. Termínalo o abórtalo antes de tomar otro.');
+
+            return;
+        }
+        $ticket = Ticket::where('estado', Ticket::ABIERTO)->find($ticketId);
+        if (! $ticket) {
+            session()->flash('error', 'Ese ticket ya no está disponible.');
+
+            return;
+        }
+
+        $tt = TicketTecnico::updateOrCreate(
+            ['ticket_id' => $ticket->id, 'empleado_id' => $this->empleadoId],
+            ['estado_trabajo' => TicketTecnico::INICIADO, 'liberado_por' => null, 'motivo' => null],
+        );
+        $dentro = $ticket->ubicacion()?->contiene($lat, $lng) ?? false;
+        $this->registrarAvance($tt, TicketTecnico::INICIADO, $lat, $lng, $precision, $dentro);
+
+        session()->flash('ok', 'Ticket iniciado.');
+    }
+
+    public function avanzar(int $ticketTecnicoId, float $lat, float $lng, ?float $precision = null): void
+    {
+        $tt = TicketTecnico::where('empleado_id', $this->empleadoId)->with('ticket')->findOrFail($ticketTecnicoId);
+        $dentro = $tt->ticket?->ubicacion()?->contiene($lat, $lng) ?? false;
+
+        if ($tt->estado_trabajo === TicketTecnico::INICIADO) {
+            if (! $dentro) {
+                session()->flash('error', 'Debes estar DENTRO del local para marcar "En ejecución".');
+
+                return;
+            }
+            $tt->update(['estado_trabajo' => TicketTecnico::EN_EJECUCION]);
+            $this->registrarAvance($tt, TicketTecnico::EN_EJECUCION, $lat, $lng, $precision, $dentro);
+            session()->flash('ok', 'Ticket en ejecución.');
+        } elseif ($tt->estado_trabajo === TicketTecnico::EN_EJECUCION) {
+            if (! $dentro) {
+                session()->flash('error', 'Debes estar DENTRO del local para Terminar.');
+
+                return;
+            }
+            $tt->update(['estado_trabajo' => TicketTecnico::TERMINADO]);
+            $this->registrarAvance($tt, TicketTecnico::TERMINADO, $lat, $lng, $precision, $dentro);
+            session()->flash('ok', 'Ticket terminado. Quedas libre para tomar otro.');
+        }
+    }
+
+    public function abortar(?float $lat = null, ?float $lng = null): void
+    {
+        $tt = $this->ticketActivoDelEmpleado();
+        if (! $tt) {
+            return;
+        }
+        $dentro = ($lat !== null) ? ($tt->ticket?->ubicacion()?->contiene($lat, $lng) ?? false) : null;
+        $tt->update(['estado_trabajo' => TicketTecnico::ABORTADO]);
+        $this->registrarAvance($tt, TicketTecnico::ABORTADO, $lat, $lng, null, $dentro);
+        session()->flash('ok', 'Misión abortada. Quedas libre para tomar otro ticket.');
     }
 
     public function solicitar(): void
@@ -97,6 +199,10 @@ new class extends Component {
             'ultimaMarcacion' => $ultimaMarcacion,
             'marcaciones' => Marcacion::where('empleado_id', $this->empleadoId)
                 ->orderByDesc('fecha_hora')->orderByDesc('id')->limit(20)->get(),
+            'ticketActivo' => $ticketActivo = $this->ticketActivoDelEmpleado(),
+            'ticketsDisponibles' => $ticketActivo
+                ? collect()
+                : Ticket::abiertos()->with(['cliente', 'sucursal', 'sede'])->orderByDesc('id')->limit(50)->get(),
             'documentos' => Documento::with('tipoDocumento')->where('empleado_id', $this->empleadoId)
                 ->orderByDesc('fecha_vencimiento')->get(),
             'solicitudes' => SolicitudVacaciones::where('empleado_id', $this->empleadoId)
@@ -111,6 +217,9 @@ new class extends Component {
 <div x-data="{ tab: 'asistencia' }">
     @if (session('ok'))
         <div class="mb-4 rounded-lg bg-success-tint text-success px-4 py-2 text-sm font-medium">{{ session('ok') }}</div>
+    @endif
+    @if (session('error'))
+        <div class="mb-4 rounded-lg bg-danger-tint text-danger px-4 py-2 text-sm font-medium">{{ session('error') }}</div>
     @endif
 
     @if (! $empleado)
@@ -131,6 +240,7 @@ new class extends Component {
         @php $tabBtn = 'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors'; @endphp
         <div class="border-b border-line mb-5 flex flex-wrap gap-1">
             <button @click="tab='asistencia'" :class="tab==='asistencia' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Asistencia</button>
+            <button @click="tab='tickets'" :class="tab==='tickets' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Tickets @if ($ticketActivo)<span class="ml-1 inline-flex items-center rounded-full bg-primary-tint text-primary px-1.5 text-[10px] font-bold">1</span>@endif</button>
             <button @click="tab='datos'" :class="tab==='datos' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Mis datos</button>
             <button @click="tab='documentos'" :class="tab==='documentos' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Mis documentos ({{ $documentos->count() }})</button>
             <button @click="tab='vacaciones'" :class="tab==='vacaciones' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Mis vacaciones</button>
@@ -209,6 +319,125 @@ new class extends Component {
                     </tbody>
                 </table>
             </div>
+        </section>
+
+        {{-- TICKETS --}}
+        <section x-show="tab==='tickets'" x-cloak x-data="{
+            cargando: false,
+            abortCont: null, abortTimer: null,
+            conGps(cb) {
+                if (!navigator.geolocation) { alert('Tu dispositivo no permite ubicación (GPS).'); return; }
+                this.cargando = true;
+                navigator.geolocation.getCurrentPosition(
+                    p => { this.cargando = false; cb(p.coords.latitude, p.coords.longitude, p.coords.accuracy); },
+                    e => { this.cargando = false; alert('Necesitamos tu ubicación: ' + e.message); },
+                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+            },
+            iniciarAbort() {
+                if (!confirm('¿Seguro que quieres ABORTAR esta misión?')) return;
+                this.abortCont = 10;
+                this.abortTimer = setInterval(() => { this.abortCont--; if (this.abortCont <= 0) { clearInterval(this.abortTimer); this.ejecutarAbort(); } }, 1000);
+            },
+            cancelarAbort() { clearInterval(this.abortTimer); this.abortCont = null; },
+            ejecutarAbort() {
+                this.abortCont = null;
+                if (navigator.geolocation) { navigator.geolocation.getCurrentPosition(p => $wire.abortar(p.coords.latitude, p.coords.longitude), () => $wire.abortar(null, null), { timeout: 8000 }); }
+                else { $wire.abortar(null, null); }
+            }
+        }">
+            @if ($ticketActivo)
+                @php $t = $ticketActivo->ticket; @endphp
+                <div class="bg-surface border border-line rounded-xl p-6 mb-5">
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <div>
+                            <div class="text-lg font-semibold text-navy">{{ $t?->ticket_atencion }}</div>
+                            <div class="text-sm text-muted">{{ $t?->cliente?->nombre_comercial ?: $t?->cliente?->razon_social }}</div>
+                            <div class="text-xs text-faint mt-0.5"><span class="inline-flex items-center gap-1"><x-icon name="map-pin" class="w-3.5 h-3.5" /> {{ $t?->ubicacion_nombre }}</span></div>
+                        </div>
+                        @php
+                            [$bc, $bt] = match ($ticketActivo->estado_trabajo) {
+                                'en_ejecucion' => ['bg-primary-tint text-primary', 'En ejecución'],
+                                default => ['bg-warning-tint text-warning', 'Iniciado'],
+                            };
+                        @endphp
+                        <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold {{ $bc }}"><span class="w-2 h-2 rounded-full bg-current"></span>{{ $bt }}</span>
+                    </div>
+
+                    {{-- Progreso de estados --}}
+                    <div class="flex items-center gap-2 text-xs text-faint mb-4">
+                        <span class="font-semibold text-success">1. Iniciado</span> →
+                        <span class="{{ $ticketActivo->estado_trabajo === 'en_ejecucion' ? 'font-semibold text-primary' : '' }}">2. En ejecución</span> →
+                        <span>3. Terminado</span>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2">
+                        @if ($ticketActivo->estado_trabajo === 'iniciado')
+                            <button :disabled="cargando" x-on:click="conGps((la,lo,ac) => $wire.avanzar({{ $ticketActivo->id }}, la, lo, ac))"
+                                    class="inline-flex items-center gap-2 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2 disabled:opacity-60">
+                                <x-icon name="map-pin" class="w-4 h-4" /> <span x-show="!cargando">Marcar "En ejecución" (en el local)</span><span x-show="cargando">Ubicando…</span>
+                            </button>
+                        @elseif ($ticketActivo->estado_trabajo === 'en_ejecucion')
+                            <button :disabled="cargando" x-on:click="conGps((la,lo,ac) => $wire.avanzar({{ $ticketActivo->id }}, la, lo, ac))"
+                                    class="inline-flex items-center gap-2 rounded-lg bg-success hover:brightness-95 text-white text-sm font-semibold px-4 py-2 disabled:opacity-60">
+                                <x-icon name="check" class="w-4 h-4" /> <span x-show="!cargando">Terminar (en el local)</span><span x-show="cargando">Ubicando…</span>
+                            </button>
+                        @endif
+
+                        {{-- Abortar misión --}}
+                        <template x-if="abortCont === null">
+                            <button x-on:click="iniciarAbort()" class="inline-flex items-center gap-2 rounded-lg border border-danger text-danger hover:bg-danger-tint text-sm font-semibold px-4 py-2">
+                                <x-icon name="ban" class="w-4 h-4" /> Abortar misión
+                            </button>
+                        </template>
+                        <template x-if="abortCont !== null">
+                            <div class="inline-flex items-center gap-3 rounded-lg bg-danger-tint text-danger px-4 py-2 text-sm font-semibold">
+                                Abortando en <span x-text="abortCont"></span>s
+                                <button x-on:click="cancelarAbort()" class="rounded-lg bg-surface border border-line text-ink px-3 py-1 text-xs">Cancelar</button>
+                            </div>
+                        </template>
+                    </div>
+                    <p class="text-xs text-faint mt-3">"En ejecución" y "Terminar" solo se pueden marcar <strong>dentro del local</strong> (geocerca).</p>
+                </div>
+            @else
+                @unless ($jornadaAbierta)
+                    <div class="mb-4 rounded-lg bg-warning-tint text-warning px-4 py-3 text-sm font-medium">Marca tu <strong>ingreso</strong> (pestaña Asistencia) para poder tomar tickets.</div>
+                @endunless
+
+                <div class="bg-surface border border-line rounded-xl overflow-x-auto">
+                    <div class="px-4 py-2 text-xs uppercase tracking-wide text-faint border-b border-line">Tickets abiertos</div>
+                    <table class="w-full text-sm min-w-[560px]">
+                        <thead>
+                            <tr class="text-left text-xs uppercase tracking-wide text-faint bg-canvas border-b border-line">
+                                <th class="px-4 py-3">Ticket</th>
+                                <th class="px-4 py-3">Cliente</th>
+                                <th class="px-4 py-3">Ubicación</th>
+                                <th class="px-4 py-3 text-right">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($ticketsDisponibles as $tk)
+                                <tr class="border-b border-line last:border-0">
+                                    <td class="px-4 py-3 font-medium text-ink">{{ $tk->ticket_atencion }}</td>
+                                    <td class="px-4 py-3 text-muted">{{ $tk->cliente?->nombre_comercial ?: $tk->cliente?->razon_social }}</td>
+                                    <td class="px-4 py-3 text-muted text-xs"><span class="inline-flex items-center gap-1"><x-icon name="map-pin" class="w-3.5 h-3.5 text-faint" /> {{ $tk->ubicacion_nombre }}</span></td>
+                                    <td class="px-4 py-3 text-right">
+                                        @if ($jornadaAbierta)
+                                            <button :disabled="cargando" x-on:click="conGps((la,lo,ac) => $wire.tomarTicket({{ $tk->id }}, la, lo, ac))"
+                                                    class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-xs font-semibold px-3 py-1.5 disabled:opacity-60">
+                                                <span x-show="!cargando">Tomar</span><span x-show="cargando">…</span>
+                                            </button>
+                                        @else
+                                            <span class="text-faint text-xs">—</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="4" class="px-4 py-8 text-center text-faint">No hay tickets abiertos por ahora.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            @endif
         </section>
 
         {{-- MIS DATOS --}}
