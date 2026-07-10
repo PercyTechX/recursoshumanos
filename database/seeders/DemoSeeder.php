@@ -7,6 +7,7 @@ use App\Models\Area;
 use App\Models\Ausencia;
 use App\Models\Cliente;
 use App\Models\Sucursal;
+use App\Models\Ticket;
 use App\Models\Cargo;
 use App\Models\CategoriaActivo;
 use App\Models\Derechohabiente;
@@ -207,6 +208,18 @@ class DemoSeeder extends Seeder
                 'centro_costo' => 'CC-001',
             ],
         );
+
+        // Ticket de ejemplo (abierto, en la sucursal Miraflores)
+        $sucursal = Sucursal::where('nombre', 'Tienda Miraflores')->first();
+        if ($sucursal) {
+            Ticket::firstOrCreate(
+                ['ticket_atencion' => 'TA-2026-0001'],
+                [
+                    'cliente_id' => $sucursal->cliente_id, 'sucursal_id' => $sucursal->id,
+                    'descripcion' => 'Mantenimiento de equipos - ejemplo', 'estado' => 'abierto',
+                ],
+            );
+        }
 
         // Activos de ejemplo (retornables, disponibles)
         $cat = CategoriaActivo::pluck('id', 'nombre');

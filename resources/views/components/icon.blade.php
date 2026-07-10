@@ -34,6 +34,9 @@
         'user-cog' => '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 8.8-4.4"/><circle cx="18" cy="17" r="2.2"/><path d="M18 13.4v1.2M18 19.4v1.2M21.1 17h-1.2M16.1 17h-1.2M20.2 14.8l-.85.85M16.65 18.35l-.85.85M20.2 19.2l-.85-.85M16.65 15.65l-.85-.85"/>',
         'key' => '<circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M17 6l2 2M14 9l2 2"/>',
         'building' => '<path d="M4 21V4a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v17"/><path d="M15 8h4a1 1 0 0 1 1 1v12"/><path d="M3 21h18"/><path d="M7 7h2M7 11h2M7 15h2"/>',
+        'ticket' => '<path d="M3 9a2 2 0 0 0 0 6v2a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-2a2 2 0 0 1 0-6V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1z"/><path d="M14 6v12"/>',
+        'lock' => '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+        'map-pin' => '<path d="M12 21s7-6.5 7-11a7 7 0 1 0-14 0c0 4.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>',
     ];
     $svg = $paths[$name] ?? '';
 @endphp

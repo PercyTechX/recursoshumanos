@@ -40,6 +40,10 @@ return [
         'label' => 'Clientes y sedes',
         'acciones' => ['ver' => 'Ver', 'crear' => 'Crear', 'editar' => 'Editar', 'eliminar' => 'Eliminar'],
     ],
+    'tickets' => [
+        'label' => 'Tickets',
+        'acciones' => ['ver' => 'Ver', 'crear' => 'Crear', 'editar' => 'Editar', 'cerrar' => 'Cerrar', 'eliminar' => 'Eliminar'],
+    ],
     'usuarios' => [
         'label' => 'Usuarios',
         'acciones' => ['ver' => 'Ver', 'crear' => 'Crear', 'editar' => 'Editar', 'eliminar' => 'Eliminar'],

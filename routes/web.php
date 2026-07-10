@@ -48,6 +48,10 @@ Route::middleware('auth')->group(function () {
         Route::view('sedes', 'sedes.index')->name('sedes.index');
     });
 
+    Route::middleware('role_or_permission:SuperAdmin|tickets.ver')->group(function () {
+        Route::view('tickets', 'tickets.index')->name('tickets.index');
+    });
+
     Route::middleware('role_or_permission:SuperAdmin|empleados.ver')->group(function () {
         Route::view('empleados', 'empleados.index')->name('empleados.index');
         Route::get('empleados/exportar', [EmpleadoController::class, 'exportar'])->name('empleados.exportar');
