@@ -98,6 +98,9 @@ Route::get('_setup/{token}', function (string $token) {
     Artisan::call('db:seed', ['--class' => \Database\Seeders\CatalogoSeeder::class, '--force' => true]);
     $salida .= Artisan::output();
 
+    Artisan::call('db:seed', ['--class' => \Database\Seeders\UbigeoSeeder::class, '--force' => true]);
+    $salida .= Artisan::output();
+
     return response('<pre style="font:14px/1.5 monospace;padding:16px">'.e($salida)."\n\n".
         'LISTO. Ahora vacía APP_SETUP_TOKEN en el .env y vuelve a desplegar.</pre>');
 })->name('setup');

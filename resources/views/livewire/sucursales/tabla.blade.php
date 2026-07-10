@@ -2,6 +2,7 @@
 
 use App\Models\Cliente;
 use App\Models\Sucursal;
+use App\Models\Ubigeo;
 use Livewire\Volt\Component;
 
 new class extends Component {
@@ -22,6 +23,17 @@ new class extends Component {
     public function mount(Cliente $cliente): void
     {
         $this->clienteId = $cliente->id;
+    }
+
+    public function updatedDepartamento(): void
+    {
+        $this->provincia = '';
+        $this->distrito = '';
+    }
+
+    public function updatedProvincia(): void
+    {
+        $this->distrito = '';
     }
 
     protected function rules(): array
@@ -101,6 +113,9 @@ new class extends Component {
         return [
             'cliente' => Cliente::findOrFail($this->clienteId),
             'sucursales' => Sucursal::where('cliente_id', $this->clienteId)->orderBy('nombre')->get(),
+            'departamentos' => Ubigeo::departamentos(),
+            'provincias' => Ubigeo::provincias($this->departamento ?: null),
+            'distritos' => Ubigeo::distritos($this->departamento ?: null, $this->provincia ?: null),
         ];
     }
 }; ?>
@@ -228,15 +243,30 @@ new class extends Component {
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-muted mb-1">Departamento</label>
-                            <input type="text" wire:model="departamento" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                            <select wire:model.live="departamento" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                                <option value="">— Seleccionar —</option>
+                                @foreach ($departamentos as $dep)
+                                    <option value="{{ $dep }}">{{ $dep }}</option>
+                                @endforeach
+                            </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-muted mb-1">Provincia</label>
-                            <input type="text" wire:model="provincia" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                            <select wire:model.live="provincia" @disabled($departamento === '') class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary disabled:bg-canvas disabled:text-faint">
+                                <option value="">— Seleccionar —</option>
+                                @foreach ($provincias as $prov)
+                                    <option value="{{ $prov }}">{{ $prov }}</option>
+                                @endforeach
+                            </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-muted mb-1">Distrito</label>
-                            <input type="text" wire:model="distrito" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                            <select wire:model="distrito" @disabled($provincia === '') class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary disabled:bg-canvas disabled:text-faint">
+                                <option value="">— Seleccionar —</option>
+                                @foreach ($distritos as $dist)
+                                    <option value="{{ $dist }}">{{ $dist }}</option>
+                                @endforeach
+                            </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-muted mb-1">Centro de costo</label>

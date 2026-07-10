@@ -203,7 +203,7 @@ class DemoSeeder extends Seeder
             ['cliente_id' => $cliente->id, 'nombre' => 'Tienda Miraflores'],
             [
                 'direccion' => 'Av. Larco 345', 'latitud' => -12.1211000, 'longitud' => -77.0299000,
-                'radio_metros' => 120, 'departamento' => 'Lima', 'provincia' => 'Lima', 'distrito' => 'Miraflores',
+                'radio_metros' => 120, 'departamento' => 'LIMA', 'provincia' => 'LIMA', 'distrito' => 'MIRAFLORES',
                 'centro_costo' => 'CC-001',
             ],
         );

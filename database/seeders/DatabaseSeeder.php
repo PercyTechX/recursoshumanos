@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
     {
         // 1) Datos permanentes (roles, catálogos). Siempre se ejecuta.
         $this->call(CatalogoSeeder::class);
+        $this->call(UbigeoSeeder::class); // ubigeos del Perú (solo si está vacío)
 
         // 2) Usuario administrador inicial (Super Admin).
         $admin = User::firstOrCreate(
