@@ -41,6 +41,13 @@ Route::middleware('auth')->group(function () {
         Route::view('usuarios', 'usuarios.index')->name('usuarios.index');
     });
 
+    Route::middleware('role_or_permission:SuperAdmin|clientes.ver')->group(function () {
+        Route::view('clientes', 'clientes.index')->name('clientes.index');
+        Route::get('clientes/{cliente}/sucursales', fn (\App\Models\Cliente $cliente) => view('clientes.sucursales', compact('cliente')))
+            ->name('clientes.sucursales');
+        Route::view('sedes', 'sedes.index')->name('sedes.index');
+    });
+
     Route::middleware('role_or_permission:SuperAdmin|empleados.ver')->group(function () {
         Route::view('empleados', 'empleados.index')->name('empleados.index');
         Route::get('empleados/exportar', [EmpleadoController::class, 'exportar'])->name('empleados.exportar');

@@ -5,6 +5,8 @@ namespace Database\Seeders;
 use App\Models\Activo;
 use App\Models\Area;
 use App\Models\Ausencia;
+use App\Models\Cliente;
+use App\Models\Sucursal;
 use App\Models\Cargo;
 use App\Models\CategoriaActivo;
 use App\Models\Derechohabiente;
@@ -186,6 +188,25 @@ class DemoSeeder extends Seeder
                 'dias' => 5, 'documento_ref' => 'CITT N° 000123', 'motivo' => 'Descanso médico de ejemplo',
             ]);
         }
+
+        // Geocerca de ejemplo en la sede Lima
+        Sede::where('nombre', 'Sede Lima')->update([
+            'tipo' => 'oficina', 'latitud' => -12.0464000, 'longitud' => -77.0428000, 'radio_metros' => 150,
+        ]);
+
+        // Cliente + sucursal de ejemplo (con geocerca)
+        $cliente = Cliente::firstOrCreate(
+            ['ruc' => '20123456789'],
+            ['razon_social' => 'Comercial Andina S.A.C.', 'nombre_comercial' => 'Andina'],
+        );
+        Sucursal::firstOrCreate(
+            ['cliente_id' => $cliente->id, 'nombre' => 'Tienda Miraflores'],
+            [
+                'direccion' => 'Av. Larco 345', 'latitud' => -12.1211000, 'longitud' => -77.0299000,
+                'radio_metros' => 120, 'departamento' => 'Lima', 'provincia' => 'Lima', 'distrito' => 'Miraflores',
+                'centro_costo' => 'CC-001',
+            ],
+        );
 
         // Activos de ejemplo (retornables, disponibles)
         $cat = CategoriaActivo::pluck('id', 'nombre');

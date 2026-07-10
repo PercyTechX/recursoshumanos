@@ -36,7 +36,7 @@ class CatalogoSeeder extends Seeder
         $todos = fn (array $mods) => collect($mods)
             ->flatMap(fn ($m) => collect(array_keys(config("permisos.$m.acciones")))->map(fn ($a) => $m.'.'.$a))
             ->all();
-        $basicos = ['empleados', 'documentos', 'documentos_compartidos', 'activos', 'vacaciones', 'ausencias'];
+        $basicos = ['empleados', 'documentos', 'documentos_compartidos', 'activos', 'vacaciones', 'ausencias', 'clientes'];
 
         // Asignación por defecto (SOLO si el rol aún no tiene permisos — no pisa lo
         // que se configure luego desde la pantalla de Roles y accesos).

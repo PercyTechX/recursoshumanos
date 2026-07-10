@@ -86,6 +86,12 @@
                         </a>
                     @endcan
 
+                    @can('clientes.ver')
+                        <a href="{{ route('clientes.index') }}" wire:navigate
+                           class="{{ $itemBase }} {{ request()->routeIs('clientes.*') || request()->routeIs('sedes.*') ? $itemOn : $itemOff }}">
+                            <x-icon name="building" class="w-5 h-5 shrink-0" /> Clientes y sedes
+                        </a>
+                    @endcan
                     @can('usuarios.ver')
                         <a href="{{ route('usuarios.index') }}" wire:navigate
                            class="{{ $itemBase }} {{ request()->routeIs('usuarios.*') ? $itemOn : $itemOff }}">

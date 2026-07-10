@@ -36,6 +36,10 @@ return [
         'label' => 'Descuentos',
         'acciones' => ['ver' => 'Ver', 'aplicar' => 'Marcar aplicado'],
     ],
+    'clientes' => [
+        'label' => 'Clientes y sedes',
+        'acciones' => ['ver' => 'Ver', 'crear' => 'Crear', 'editar' => 'Editar', 'eliminar' => 'Eliminar'],
+    ],
     'usuarios' => [
         'label' => 'Usuarios',
         'acciones' => ['ver' => 'Ver', 'crear' => 'Crear', 'editar' => 'Editar', 'eliminar' => 'Eliminar'],
