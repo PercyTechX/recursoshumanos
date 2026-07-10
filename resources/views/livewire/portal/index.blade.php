@@ -2,6 +2,7 @@
 
 use App\Models\Ausencia;
 use App\Models\Documento;
+use App\Models\Marcacion;
 use App\Models\MovimientoVacaciones;
 use App\Models\SolicitudVacaciones;
 use Illuminate\Support\Facades\Storage;
@@ -19,6 +20,29 @@ new class extends Component {
     public function mount(): void
     {
         $this->empleadoId = auth()->user()->empleado?->id;
+    }
+
+    /** Marca ingreso o salida (el tipo se decide según la última marcación). */
+    public function marcar(float $lat, float $lng, ?float $precision = null): void
+    {
+        abort_if($this->empleadoId === null, 403);
+
+        $ultima = Marcacion::where('empleado_id', $this->empleadoId)
+            ->orderByDesc('fecha_hora')->orderByDesc('id')->first();
+        $tipo = ($ultima && $ultima->tipo === Marcacion::INGRESO) ? Marcacion::SALIDA : Marcacion::INGRESO;
+
+        Marcacion::create([
+            'empleado_id' => $this->empleadoId,
+            'tipo' => $tipo,
+            'fecha_hora' => now(),
+            'latitud' => $lat,
+            'longitud' => $lng,
+            'precision_m' => $precision,
+            'user_agent' => substr((string) request()->userAgent(), 0, 255),
+            'ip' => request()->ip(),
+        ]);
+
+        session()->flash('ok', ($tipo === Marcacion::INGRESO ? 'Ingreso' : 'Salida').' registrada correctamente.');
     }
 
     public function solicitar(): void
@@ -64,8 +88,15 @@ new class extends Component {
 
         $empleado = \App\Models\Empleado::with(['area', 'cargo', 'sede'])->find($this->empleadoId);
 
+        $ultimaMarcacion = Marcacion::where('empleado_id', $this->empleadoId)
+            ->orderByDesc('fecha_hora')->orderByDesc('id')->first();
+
         return [
             'empleado' => $empleado,
+            'jornadaAbierta' => $ultimaMarcacion && $ultimaMarcacion->tipo === 'ingreso',
+            'ultimaMarcacion' => $ultimaMarcacion,
+            'marcaciones' => Marcacion::where('empleado_id', $this->empleadoId)
+                ->orderByDesc('fecha_hora')->orderByDesc('id')->limit(20)->get(),
             'documentos' => Documento::with('tipoDocumento')->where('empleado_id', $this->empleadoId)
                 ->orderByDesc('fecha_vencimiento')->get(),
             'solicitudes' => SolicitudVacaciones::where('empleado_id', $this->empleadoId)
@@ -77,7 +108,7 @@ new class extends Component {
     }
 }; ?>
 
-<div x-data="{ tab: 'datos' }">
+<div x-data="{ tab: 'asistencia' }">
     @if (session('ok'))
         <div class="mb-4 rounded-lg bg-success-tint text-success px-4 py-2 text-sm font-medium">{{ session('ok') }}</div>
     @endif
@@ -99,14 +130,89 @@ new class extends Component {
         {{-- Pestañas --}}
         @php $tabBtn = 'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors'; @endphp
         <div class="border-b border-line mb-5 flex flex-wrap gap-1">
+            <button @click="tab='asistencia'" :class="tab==='asistencia' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Asistencia</button>
             <button @click="tab='datos'" :class="tab==='datos' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Mis datos</button>
             <button @click="tab='documentos'" :class="tab==='documentos' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Mis documentos ({{ $documentos->count() }})</button>
             <button @click="tab='vacaciones'" :class="tab==='vacaciones' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Mis vacaciones</button>
             <button @click="tab='ausencias'" :class="tab==='ausencias' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Mis ausencias ({{ $ausencias->count() }})</button>
         </div>
 
+        {{-- ASISTENCIA --}}
+        <section x-show="tab==='asistencia'">
+            <div class="bg-surface border border-line rounded-xl p-6 mb-5 text-center">
+                @if ($jornadaAbierta)
+                    <div class="inline-flex items-center gap-2 rounded-full bg-success-tint text-success px-3 py-1 text-xs font-semibold mb-3">
+                        <span class="w-2 h-2 rounded-full bg-current"></span>Jornada abierta desde {{ $ultimaMarcacion->fecha_hora->format('d/m/Y H:i') }}
+                    </div>
+                @else
+                    <div class="inline-flex items-center gap-2 rounded-full bg-canvas text-muted border border-line px-3 py-1 text-xs font-semibold mb-3">
+                        <span class="w-2 h-2 rounded-full bg-current"></span>Sin jornada abierta
+                    </div>
+                @endif
+
+                <div x-data="{ cargando: false }">
+                    <button
+                        x-on:click="
+                            if (!navigator.geolocation) { alert('Tu dispositivo no permite ubicación (GPS).'); return; }
+                            cargando = true;
+                            navigator.geolocation.getCurrentPosition(
+                                p => { $wire.marcar(p.coords.latitude, p.coords.longitude, p.coords.accuracy).then(() => cargando = false); },
+                                e => { cargando = false; alert('Necesitamos tu ubicación para marcar: ' + e.message); },
+                                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                            )
+                        "
+                        :disabled="cargando"
+                        class="inline-flex items-center gap-2 rounded-xl px-8 py-4 text-lg font-bold text-white shadow-lg disabled:opacity-60
+                               {{ $jornadaAbierta ? 'bg-danger hover:brightness-95' : 'bg-success hover:brightness-95' }}">
+                        <x-icon name="map-pin" class="w-6 h-6" />
+                        <span x-show="!cargando">{{ $jornadaAbierta ? 'Marcar salida' : 'Marcar ingreso' }}</span>
+                        <span x-show="cargando">Obteniendo ubicación…</span>
+                    </button>
+                    <p class="text-xs text-faint mt-3">Se registrará tu ubicación (GPS) y la hora exacta. Requiere permitir la ubicación en tu celular.</p>
+                </div>
+            </div>
+
+            {{-- Marcaciones recientes --}}
+            <div class="bg-surface border border-line rounded-xl overflow-x-auto">
+                <div class="px-4 py-2 text-xs uppercase tracking-wide text-faint border-b border-line">Mis marcaciones recientes</div>
+                <table class="w-full text-sm min-w-[520px]">
+                    <thead>
+                        <tr class="text-left text-xs uppercase tracking-wide text-faint bg-canvas border-b border-line">
+                            <th class="px-4 py-3">Tipo</th>
+                            <th class="px-4 py-3">Fecha y hora</th>
+                            <th class="px-4 py-3">Ubicación (GPS)</th>
+                            <th class="px-4 py-3">Origen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($marcaciones as $m)
+                            <tr class="border-b border-line last:border-0">
+                                <td class="px-4 py-3">
+                                    @if ($m->tipo === 'ingreso')
+                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-success-tint text-success px-2.5 py-0.5 text-xs font-semibold">Ingreso</span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-warning-tint text-warning px-2.5 py-0.5 text-xs font-semibold">Salida</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 text-muted tabular-nums">{{ $m->fecha_hora->format('d/m/Y H:i:s') }}</td>
+                                <td class="px-4 py-3 text-faint text-xs tabular-nums">
+                                    @if ($m->latitud !== null){{ $m->latitud }}, {{ $m->longitud }} @if ($m->precision_m)· ±{{ (int) $m->precision_m }}m @endif
+                                    @else — @endif
+                                </td>
+                                <td class="px-4 py-3 text-xs">
+                                    @if ($m->es_manual)<span class="text-warning">Manual (supervisor)</span>@else<span class="text-muted">App</span>@endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="4" class="px-4 py-8 text-center text-faint">Aún no tienes marcaciones.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
         {{-- MIS DATOS --}}
-        <section x-show="tab==='datos'" class="bg-surface border border-line rounded-xl p-6">
+        <section x-show="tab==='datos'" x-cloak class="bg-surface border border-line rounded-xl p-6">
             <dl class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4 text-sm">
                 @php
                     $campos = [

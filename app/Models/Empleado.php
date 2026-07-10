@@ -105,6 +105,11 @@ class Empleado extends Model
         return $this->hasMany(Ausencia::class);
     }
 
+    public function marcaciones(): HasMany
+    {
+        return $this->hasMany(Marcacion::class);
+    }
+
     public function solicitudesVacaciones(): HasMany
     {
         return $this->hasMany(SolicitudVacaciones::class);
