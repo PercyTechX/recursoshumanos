@@ -1,7 +1,7 @@
 # Estado actual del proyecto
 
 > Actualizado: 2026-07-10. Resumen consolidado de lo construido, su estado de
-> despliegue y lo pendiente. **81 tests en verde.**
+> despliegue y lo pendiente. **98 tests en verde.**
 
 ## Módulos construidos
 
@@ -22,16 +22,23 @@
 | **Usuarios y Super Admin** | CRUD, reset clave, activar, vincular empleado | 11 | 🟡 local |
 | **Roles y accesos (matriz)** | Permisos por módulo × acción, configurable | 11 | 🟡 local |
 | **Portal del trabajador** | Autoservicio: mis datos/documentos/vacaciones/ausencias | 12 | 🟡 local |
+| **Clientes / Sucursales / Sedes** | Catálogos con geocerca + ubigeos (listas dependientes) | 14 | 🟡 local (feature/asistencia) |
+| **Tickets (órdenes de trabajo)** | Supervisor crea/cierra; cliente + ubicación | 14 | 🟡 local |
+| **Asistencia (marcación GPS)** | Ingreso/salida con GPS en "Mi espacio" | 14 | 🟡 local |
+| **Operación de tickets** | Estados + geocerca + abortar misión | 14 | 🟡 local |
 
 ## Estado de despliegue
 
 - **En producción (`rrhh.gds.pe`)** está lo marcado ✅: hasta el módulo de
   Vacaciones (base). Ver [09-deploy-cpanel.md](09-deploy-cpanel.md).
 - **Pendiente de subir (🟡):** todo lo construido después está en la rama
-  **`feature/usuarios`** (9 commits sobre `main`), **validado en local** por el
-  usuario. Para publicarlo: fusionar a `main` → push → *Update from Remote* en
-  cPanel → `/_setup/{token}` (hay migraciones nuevas: retorno, ausencias,
-  avisos_documento, users.activo, permisos).
+  **`feature/asistencia`** (que incluye `feature/usuarios`), **validado en local**.
+  Para publicar a producción: fusionar a `main` → push → *Update from Remote* en
+  cPanel → `/_setup/{token}` (hay muchas migraciones nuevas: retorno, ausencias,
+  avisos, users.activo, permisos, clientes, sucursales, ubigeos, tickets,
+  marcaciones, ticket_tecnico/avances).
+- **Respaldo en GitHub:** las ramas de features se pushean a GitHub como respaldo
+  (no despliegan solas; producción solo se actualiza con el flujo de arriba).
 
 ## Cómo se prueba en local
 
