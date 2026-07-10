@@ -44,7 +44,16 @@ Detalle y justificación en [docs/01-stack-tecnologico.md](docs/01-stack-tecnolo
 | [docs/04-ui-diseno.md](docs/04-ui-diseno.md) | Estilo visual (modo claro, inspirado en Docker), paleta/tokens y componentes. |
 | [docs/05-despliegue.md](docs/05-despliegue.md) | Estrategia de despliegue **sin SSH** (GitHub → cPanel Git, `vendor`/build incluidos). |
 | [docs/06-activos.md](docs/06-activos.md) | Control de **activos/EPP**, hoja de ruta, descuentos y expediente del empleado. |
-| [docs/07-ficha-empleado.md](docs/07-ficha-empleado.md) | **Pendiente**: ficha completa del empleado (sueldo, CCI, etc.) + derechohabientes. |
+| [docs/07-ficha-empleado.md](docs/07-ficha-empleado.md) | Ficha completa del empleado (sueldo, CCI, etc.) + **derechohabientes**. |
+| [docs/08-documentos-compartidos.md](docs/08-documentos-compartidos.md) | **SCTR colectivo**: un archivo que ampara a muchas personas. |
+| [docs/09-deploy-cpanel.md](docs/09-deploy-cpanel.md) | Guía **real** de despliegue en cPanel (yachay) sin SSH, con tropiezos y soluciones. |
+| [docs/10-vacaciones.md](docs/10-vacaciones.md) | **Vacaciones**: solicitudes + saldo tipo ledger + retorno anticipado. |
+| [docs/11-usuarios-roles.md](docs/11-usuarios-roles.md) | **Usuarios, Super Admin y Roles/accesos** (matriz módulo × acción). |
+| [docs/12-portal-trabajador.md](docs/12-portal-trabajador.md) | **Portal del trabajador** (autoservicio: mis datos, documentos, vacaciones, ausencias). |
+| [docs/13-estado-actual.md](docs/13-estado-actual.md) | **Estado consolidado**: qué está en producción vs. local, y pendientes. |
+| [docs/14-asistencia.md](docs/14-asistencia.md) | Módulo de **Asistencia** con geocerca (en definición). |
+
+> 📌 **Estado del proyecto:** ver [docs/13-estado-actual.md](docs/13-estado-actual.md).
 
 ---
 
