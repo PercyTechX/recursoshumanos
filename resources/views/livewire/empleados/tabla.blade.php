@@ -41,6 +41,7 @@ new class extends Component {
     public ?int $area_id = null;
     public ?int $cargo_id = null;
     public ?int $sede_id = null;
+    public ?int $supervisor_id = null;
     public string $fecha_ingreso = '';
     public string $tipo_contrato = '';
     public string $tipo_trabajador = '';
@@ -86,6 +87,7 @@ new class extends Component {
             'area_id' => ['nullable', 'exists:areas,id'],
             'cargo_id' => ['nullable', 'exists:cargos,id'],
             'sede_id' => ['nullable', 'exists:sedes,id'],
+            'supervisor_id' => ['nullable', 'exists:empleados,id'],
             'fecha_ingreso' => ['nullable', 'date'],
             'tipo_contrato' => ['nullable', 'string', 'max:60'],
             'tipo_trabajador' => ['nullable', 'string', 'max:60'],
@@ -132,6 +134,7 @@ new class extends Component {
         $this->area_id = $e->area_id;
         $this->cargo_id = $e->cargo_id;
         $this->sede_id = $e->sede_id;
+        $this->supervisor_id = $e->supervisor_id;
         $this->fecha_ingreso = optional($e->fecha_ingreso)->format('Y-m-d') ?? '';
         $this->tipo_contrato = $e->tipo_contrato ?? '';
         $this->tipo_trabajador = $e->tipo_trabajador ?? '';
@@ -190,7 +193,7 @@ new class extends Component {
             'editandoId', 'numero_documento', 'nombres', 'apellidos', 'fecha_nacimiento',
             'sexo', 'estado_civil', 'telefono', 'correo', 'direccion',
             'emergencia_nombre', 'emergencia_parentesco', 'emergencia_telefono',
-            'area_id', 'cargo_id', 'sede_id', 'fecha_ingreso', 'tipo_contrato', 'tipo_trabajador',
+            'area_id', 'cargo_id', 'sede_id', 'supervisor_id', 'fecha_ingreso', 'tipo_contrato', 'tipo_trabajador',
             'regimen_laboral', 'modalidad_pago', 'sueldo', 'sistema_pensionario', 'cuspp', 'afp_nombre',
             'tiene_seguro', 'banco', 'numero_cuenta', 'cci',
             'fecha_cese',
@@ -224,6 +227,7 @@ new class extends Component {
             'areas' => Area::orderBy('nombre')->get(),
             'cargos' => Cargo::orderBy('nombre')->get(),
             'sedes' => Sede::orderBy('nombre')->get(),
+            'supervisores' => Empleado::orderBy('apellidos')->orderBy('nombres')->get(),
         ];
     }
 }; ?>
@@ -405,6 +409,18 @@ new class extends Component {
                                     <option value="{{ $s->id }}">{{ $s->nombre }}</option>
                                 @endforeach
                             </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Supervisor</label>
+                            <select wire:model="supervisor_id" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                                <option value="">— Seleccionar —</option>
+                                @foreach ($supervisores as $sup)
+                                    @if ($sup->id !== $editandoId)
+                                        <option value="{{ $sup->id }}">{{ $sup->apellidos }}, {{ $sup->nombres }}</option>
+                                    @endif
+                                @endforeach
+                            </select>
+                            <p class="text-xs text-faint mt-1">Recibe los avisos de vencimiento de documentos.</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-muted mb-1">Fecha de ingreso</label>

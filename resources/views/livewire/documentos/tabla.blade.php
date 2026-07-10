@@ -1,9 +1,12 @@
 <?php
 
+use App\Mail\AvisoVencimientoDocumento;
+use App\Models\AvisoDocumento;
 use App\Models\Documento;
 use App\Models\Empleado;
 use App\Models\TipoDocumento;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Mail;
 use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
 use Livewire\WithFileUploads;
@@ -103,6 +106,46 @@ new class extends Component {
     {
         Documento::findOrFail($id)->delete();
         session()->flash('ok', 'Documento eliminado.');
+    }
+
+    /** Envía un correo al supervisor del trabajador avisando del vencimiento. */
+    public function avisar(int $id): void
+    {
+        $doc = Documento::with(['empleado.supervisor.user', 'tipoDocumento'])->findOrFail($id);
+
+        if (! in_array($doc->estado, ['por_vencer', 'vencido'], true)) {
+            session()->flash('error', 'Solo se avisa de documentos por vencer o vencidos.');
+
+            return;
+        }
+
+        $supervisor = $doc->empleado?->supervisor;
+        if (! $supervisor) {
+            session()->flash('error', 'El trabajador no tiene un supervisor asignado.');
+
+            return;
+        }
+
+        $email = $supervisor->correo ?: $supervisor->user?->email;
+        if (! $email) {
+            session()->flash('error', 'El supervisor no tiene un correo registrado.');
+
+            return;
+        }
+
+        Mail::to($email)->send(new AvisoVencimientoDocumento($doc));
+
+        AvisoDocumento::create([
+            'documento_id' => $doc->id,
+            'empleado_id' => $doc->empleado_id,
+            'supervisor_id' => $supervisor->id,
+            'email_destino' => $email,
+            'estado_documento' => $doc->estado,
+            'dias' => $doc->dias_para_vencer,
+            'enviado_por' => auth()->id(),
+        ]);
+
+        session()->flash('ok', "Aviso enviado al supervisor ({$email}).");
     }
 
     public function resetForm(): void
@@ -219,6 +262,11 @@ new class extends Component {
     @if (session('ok'))
         <div class="mb-4 rounded-lg bg-success-tint text-success px-4 py-2 text-sm font-medium">
             {{ session('ok') }}
+        </div>
+    @endif
+    @if (session('error'))
+        <div class="mb-4 rounded-lg bg-danger-tint text-danger px-4 py-2 text-sm font-medium">
+            {{ session('error') }}
         </div>
     @endif
 
@@ -340,8 +388,13 @@ new class extends Component {
                             @endif
                         </td>
                         <td class="px-4 py-3 text-right whitespace-nowrap">
+                            @if (in_array($d->estado, ['por_vencer', 'vencido'], true))
+                                <button wire:click="avisar({{ $d->id }})"
+                                        wire:confirm="¿Enviar un correo al supervisor avisando de este documento?"
+                                        class="text-warning hover:underline text-sm font-medium" title="Avisar al supervisor por correo">✉ Avisar</button>
+                            @endif
                             <button wire:click="verHistorial({{ $d->empleado_id }}, {{ $d->tipo_documento_id }})"
-                                    class="text-muted hover:text-primary hover:underline text-sm font-medium" title="Ver todas las versiones de este requisito">Historial</button>
+                                    class="ml-3 text-muted hover:text-primary hover:underline text-sm font-medium" title="Ver todas las versiones de este requisito">Historial</button>
                             <button wire:click="editar({{ $d->id }})" class="ml-3 text-primary hover:underline text-sm font-medium">Editar</button>
                             <button wire:click="eliminar({{ $d->id }})" wire:confirm="¿Eliminar este documento?"
                                     class="ml-3 text-danger hover:underline text-sm font-medium">Eliminar</button>

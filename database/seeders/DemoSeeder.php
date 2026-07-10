@@ -79,6 +79,19 @@ class DemoSeeder extends Seeder
             );
         }
 
+        // Organigrama de ejemplo (supervisores) — habilita el aviso al supervisor
+        $ids = Empleado::pluck('id', 'numero_documento');
+        $jefeOperaciones = $ids['34567890'] ?? null; // Carlos (Supervisor)
+        $gerente = $ids['56789012'] ?? null;          // Luis (Gerente)
+        if ($jefeOperaciones) {
+            Empleado::whereIn('numero_documento', ['12345678', '67890123', '78901234', '89012345'])
+                ->update(['supervisor_id' => $jefeOperaciones]);
+        }
+        if ($gerente) {
+            Empleado::whereIn('numero_documento', ['34567890', '23456789', '45678901'])
+                ->update(['supervisor_id' => $gerente]);
+        }
+
         // Derechohabientes de ejemplo (familia de Juan Carlos Pérez)
         $juan = Empleado::where('numero_documento', '12345678')->first();
         if ($juan) {
