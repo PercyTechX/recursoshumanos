@@ -37,7 +37,7 @@
                         <x-icon name="home" class="w-5 h-5 shrink-0" /> Tablero
                     </a>
 
-                    @hasanyrole('RRHH|Gerencia|Supervisor')
+                    @hasanyrole('SuperAdmin|RRHH|Gerencia|Supervisor')
                         <a href="{{ route('empleados.index') }}" wire:navigate
                            class="{{ $itemBase }} {{ request()->routeIs('empleados.*') ? $itemOn : $itemOff }}">
                             <x-icon name="users" class="w-5 h-5 shrink-0" /> Empleados
@@ -64,10 +64,17 @@
                         </a>
                     @endhasanyrole
 
-                    @hasanyrole('Contador|RRHH|Gerencia')
+                    @hasanyrole('SuperAdmin|Contador|RRHH|Gerencia')
                         <a href="{{ route('descuentos.index') }}" wire:navigate
                            class="{{ $itemBase }} {{ request()->routeIs('descuentos.*') ? $itemOn : $itemOff }}">
                             <x-icon name="cash" class="w-5 h-5 shrink-0" /> Descuentos
+                        </a>
+                    @endhasanyrole
+
+                    @hasanyrole('SuperAdmin|RRHH')
+                        <a href="{{ route('usuarios.index') }}" wire:navigate
+                           class="{{ $itemBase }} {{ request()->routeIs('usuarios.*') ? $itemOn : $itemOff }}">
+                            <x-icon name="user-cog" class="w-5 h-5 shrink-0" /> Usuarios
                         </a>
                     @endhasanyrole
                 </nav>

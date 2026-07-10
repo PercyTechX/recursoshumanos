@@ -38,6 +38,15 @@ class LoginForm extends Form
             ]);
         }
 
+        // Usuario desactivado: no puede ingresar.
+        if (Auth::user()->activo === false) {
+            Auth::logout();
+
+            throw ValidationException::withMessages([
+                'form.email' => 'Tu cuenta está desactivada. Contacta al administrador.',
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 

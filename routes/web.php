@@ -23,8 +23,13 @@ Route::post('logout', function (Logout $logout) {
     return redirect('/');
 })->middleware('auth')->name('logout');
 
+// Gestión de usuarios (acceso: SuperAdmin, RRHH)
+Route::middleware(['auth', 'role:SuperAdmin|RRHH'])->group(function () {
+    Route::view('usuarios', 'usuarios.index')->name('usuarios.index');
+});
+
 // Módulos RRHH (acceso: RRHH, Gerencia, Supervisor)
-Route::middleware(['auth', 'role:RRHH|Gerencia|Supervisor'])->group(function () {
+Route::middleware(['auth', 'role:SuperAdmin|RRHH|Gerencia|Supervisor'])->group(function () {
     Route::view('empleados', 'empleados.index')->name('empleados.index');
     Route::get('empleados/exportar', [EmpleadoController::class, 'exportar'])->name('empleados.exportar');
     Route::get('empleados/{empleado}/hoja-ruta', fn (\App\Models\Empleado $empleado) => view('empleados.hoja-ruta', compact('empleado')))
@@ -44,7 +49,7 @@ Route::middleware(['auth', 'role:RRHH|Gerencia|Supervisor'])->group(function () 
 });
 
 // Descuentos — visible para Contador (y RRHH/Gerencia)
-Route::middleware(['auth', 'role:Contador|RRHH|Gerencia'])->group(function () {
+Route::middleware(['auth', 'role:SuperAdmin|Contador|RRHH|Gerencia'])->group(function () {
     Route::view('descuentos', 'descuentos.index')->name('descuentos.index');
 });
 

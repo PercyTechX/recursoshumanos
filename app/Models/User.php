@@ -23,6 +23,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'activo',
     ];
 
     /**
@@ -45,6 +46,13 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'activo' => 'boolean',
         ];
+    }
+
+    /** Empleado vinculado a este usuario (para autoservicio). */
+    public function empleado(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Empleado::class);
     }
 }

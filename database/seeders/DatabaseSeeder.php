@@ -16,12 +16,12 @@ class DatabaseSeeder extends Seeder
         // 1) Datos permanentes (roles, catálogos). Siempre se ejecuta.
         $this->call(CatalogoSeeder::class);
 
-        // 2) Usuario administrador inicial (RRHH).
+        // 2) Usuario administrador inicial (Super Admin).
         $admin = User::firstOrCreate(
             ['email' => 'admin@rrhh.test'],
-            ['name' => 'Administrador RRHH', 'password' => Hash::make('password')],
+            ['name' => 'Administrador', 'password' => Hash::make('password')],
         );
-        $admin->syncRoles('RRHH');
+        $admin->syncRoles(['SuperAdmin', 'RRHH']);
 
         // 3) Datos de prueba desechables (solo fuera de producción).
         // Se ejecuta aparte con: php artisan db:seed --class=DemoSeeder

@@ -19,8 +19,8 @@ class CatalogoSeeder extends Seeder
 {
     public function run(): void
     {
-        // Roles del sistema
-        foreach (['RRHH', 'Supervisor', 'Gerencia', 'Empleado', 'Contador'] as $rol) {
+        // Roles del sistema (SuperAdmin ve y hace todo — vía Gate::before)
+        foreach (['SuperAdmin', 'RRHH', 'Supervisor', 'Gerencia', 'Empleado', 'Contador'] as $rol) {
             Role::firstOrCreate(['name' => $rol]);
         }
 
