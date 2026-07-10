@@ -90,6 +90,38 @@ class VacacionesTest extends TestCase
         $this->assertSame(0, MovimientoVacaciones::where('empleado_id', $empleado->id)->count());
     }
 
+    public function test_retorno_anticipado_reintegra_dias_al_saldo(): void
+    {
+        $this->actorConRol('RRHH');
+        $empleado = Empleado::create(['numero_documento' => '50505050', 'nombres' => 'Rosa', 'apellidos' => 'León']);
+        MovimientoVacaciones::create(['empleado_id' => $empleado->id, 'fecha' => '2026-01-01', 'tipo' => 'apertura', 'dias' => 30]);
+
+        // Aprobada: 10 días (1 al 10 de agosto)
+        $s = SolicitudVacaciones::create([
+            'empleado_id' => $empleado->id, 'fecha_inicio' => '2026-08-01', 'fecha_fin' => '2026-08-10',
+            'dias' => 10, 'estado' => 'aprobada',
+        ]);
+        MovimientoVacaciones::create([
+            'empleado_id' => $empleado->id, 'fecha' => '2026-08-01', 'tipo' => 'gozado', 'dias' => -10, 'solicitud_id' => $s->id,
+        ]);
+        $this->assertSame(20.0, $empleado->fresh()->saldo_vacaciones);
+
+        // Lo hacen volver: último día real 4 de agosto (gozó 4 de 10 → reintegra 6)
+        Volt::test('vacaciones.tabla')
+            ->call('abrirRetorno', $s->id)
+            ->set('fecha_fin_real', '2026-08-04')
+            ->call('registrarRetorno')
+            ->assertHasNoErrors();
+
+        $s->refresh();
+        $this->assertSame('2026-08-04', $s->fecha_fin_real->toDateString());
+        $this->assertSame('6.00', (string) $s->dias_reintegrados);
+        $this->assertDatabaseHas('movimientos_vacaciones', [
+            'solicitud_id' => $s->id, 'tipo' => 'reintegro', 'dias' => 6.00,
+        ]);
+        $this->assertSame(26.0, $empleado->fresh()->saldo_vacaciones); // 20 + 6
+    }
+
     public function test_registrar_apertura_desde_el_expediente(): void
     {
         $this->actorConRol('RRHH');

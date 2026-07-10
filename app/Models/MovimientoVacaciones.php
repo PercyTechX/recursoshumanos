@@ -21,9 +21,10 @@ class MovimientoVacaciones extends Model
     public const APERTURA = 'apertura';
     public const DEVENGADO = 'devengado';
     public const GOZADO = 'gozado';
+    public const REINTEGRO = 'reintegro';
     public const AJUSTE = 'ajuste';
 
-    public const TIPOS = [self::APERTURA, self::DEVENGADO, self::GOZADO, self::AJUSTE];
+    public const TIPOS = [self::APERTURA, self::DEVENGADO, self::GOZADO, self::REINTEGRO, self::AJUSTE];
 
     public function empleado(): BelongsTo
     {
@@ -41,6 +42,7 @@ class MovimientoVacaciones extends Model
             self::APERTURA => 'Apertura',
             self::DEVENGADO => 'Devengado',
             self::GOZADO => 'Gozado',
+            self::REINTEGRO => 'Reintegro (retorno anticipado)',
             self::AJUSTE => 'Ajuste',
             default => ucfirst($this->tipo),
         };
