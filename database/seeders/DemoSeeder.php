@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Activo;
 use App\Models\Area;
+use App\Models\Ausencia;
 use App\Models\Cargo;
 use App\Models\CategoriaActivo;
 use App\Models\Derechohabiente;
@@ -161,6 +162,16 @@ class DemoSeeder extends Seeder
                 ]);
                 $dc->empleados()->sync($ampara->all());
             }
+        }
+
+        // Ausencia de ejemplo (descanso médico)
+        $juanId = $ids['12345678'] ?? null;
+        if ($juanId && Ausencia::count() === 0) {
+            Ausencia::create([
+                'empleado_id' => $juanId, 'tipo' => 'descanso_medico', 'con_goce' => true,
+                'fecha_inicio' => now()->subDays(8)->toDateString(), 'fecha_fin' => now()->subDays(4)->toDateString(),
+                'dias' => 5, 'documento_ref' => 'CITT N° 000123', 'motivo' => 'Descanso médico de ejemplo',
+            ]);
         }
 
         // Activos de ejemplo (retornables, disponibles)

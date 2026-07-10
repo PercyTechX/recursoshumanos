@@ -39,6 +39,8 @@ Route::middleware(['auth', 'role:RRHH|Gerencia|Supervisor'])->group(function () 
     Route::view('activos', 'activos.index')->name('activos.index');
 
     Route::view('vacaciones', 'vacaciones.index')->name('vacaciones.index');
+
+    Route::view('ausencias', 'ausencias.index')->name('ausencias.index');
 });
 
 // Descuentos — visible para Contador (y RRHH/Gerencia)

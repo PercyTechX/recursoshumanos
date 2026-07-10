@@ -30,6 +30,7 @@
         'user-plus' => '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M18 8v6M15 11h6"/>',
         'refresh' => '<path d="M20 11a8 8 0 0 0-14-4.5L3 9"/><path d="M3 4v5h5"/><path d="M4 13a8 8 0 0 0 14 4.5L21 15"/><path d="M21 20v-5h-5"/>',
         'ban' => '<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/>',
+        'health' => '<path d="M20 8.5a4.5 4.5 0 0 0-8-2.8A4.5 4.5 0 0 0 4 8.5c0 4 8 9.5 8 9.5s8-5.5 8-9.5z"/><path d="M4.5 12h3l1.5-3 2 5 1.5-2H16"/>',
     ];
     $svg = $paths[$name] ?? '';
 @endphp

@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Asignacion;
+use App\Models\Ausencia;
 use App\Models\Derechohabiente;
 use App\Models\Documento;
 use App\Models\Empleado;
@@ -235,6 +236,8 @@ new class extends Component {
             'solicitudesVac' => SolicitudVacaciones::where('empleado_id', $this->empleadoId)
                 ->orderByDesc('fecha_inicio')->get(),
             'saldoVac' => (float) MovimientoVacaciones::where('empleado_id', $this->empleadoId)->sum('dias'),
+            'ausencias' => Ausencia::where('empleado_id', $this->empleadoId)
+                ->orderByDesc('fecha_inicio')->get(),
         ];
     }
 }; ?>
@@ -275,6 +278,7 @@ new class extends Component {
         <button @click="tab='activos'" :class="tab==='activos' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Activos ({{ $asignaciones->whereNull('fecha_devolucion')->count() }})</button>
         <button @click="tab='epp'" :class="tab==='epp' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">EPP ({{ $entregasEpp->count() }})</button>
         <button @click="tab='vacaciones'" :class="tab==='vacaciones' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Vacaciones</button>
+        <button @click="tab='ausencias'" :class="tab==='ausencias' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Ausencias ({{ $ausencias->count() }})</button>
         <button @click="tab='hojas'" :class="tab==='hojas' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Hojas de ruta ({{ $hojasRuta->count() }})</button>
     </div>
 
@@ -594,6 +598,42 @@ new class extends Component {
                 </tbody>
             </table>
         </div>
+    </section>
+
+    {{-- AUSENCIAS --}}
+    <section x-show="tab==='ausencias'" x-cloak class="bg-surface border border-line rounded-xl overflow-x-auto">
+        <table class="w-full text-sm min-w-[560px]">
+            <thead>
+                <tr class="text-left text-xs uppercase tracking-wide text-faint bg-canvas border-b border-line">
+                    <th class="px-4 py-3">Tipo</th>
+                    <th class="px-4 py-3">Periodo</th>
+                    <th class="px-4 py-3 text-center">Días</th>
+                    <th class="px-4 py-3">Goce</th>
+                    <th class="px-4 py-3">Archivo</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse ($ausencias as $a)
+                    <tr class="border-b border-line last:border-0">
+                        <td class="px-4 py-3 text-ink">{{ $a->tipo_label }}@if ($a->documento_ref)<div class="text-faint text-xs">{{ $a->documento_ref }}</div>@endif</td>
+                        <td class="px-4 py-3 text-muted tabular-nums">{{ $a->fecha_inicio->format('d/m/Y') }} → {{ $a->fecha_fin->format('d/m/Y') }}</td>
+                        <td class="px-4 py-3 text-center tabular-nums">{{ $a->dias }}</td>
+                        <td class="px-4 py-3">
+                            @if ($a->con_goce)
+                                <span class="text-success text-xs font-semibold">Con goce</span>
+                            @else <span class="text-muted text-xs font-semibold">Sin goce</span> @endif
+                        </td>
+                        <td class="px-4 py-3">
+                            @if ($a->archivo_path)
+                                <a href="{{ Storage::url($a->archivo_path) }}" target="_blank" class="text-primary hover:underline">Ver</a>
+                            @else <span class="text-faint">—</span> @endif
+                        </td>
+                    </tr>
+                @empty
+                    <tr><td colspan="5" class="px-4 py-8 text-center text-faint">Sin ausencias registradas.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
     </section>
 
     {{-- HOJAS DE RUTA --}}

@@ -58,6 +58,10 @@
                            class="{{ $itemBase }} {{ request()->routeIs('vacaciones.*') ? $itemOn : $itemOff }}">
                             <x-icon name="sun" class="w-5 h-5 shrink-0" /> Vacaciones
                         </a>
+                        <a href="{{ route('ausencias.index') }}" wire:navigate
+                           class="{{ $itemBase }} {{ request()->routeIs('ausencias.*') ? $itemOn : $itemOff }}">
+                            <x-icon name="health" class="w-5 h-5 shrink-0" /> Ausencias
+                        </a>
                     @endhasanyrole
 
                     @hasanyrole('Contador|RRHH|Gerencia')

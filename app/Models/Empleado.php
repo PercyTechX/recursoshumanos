@@ -100,6 +100,11 @@ class Empleado extends Model
         return $this->belongsToMany(DocumentoCompartido::class, 'documento_compartido_empleado');
     }
 
+    public function ausencias(): HasMany
+    {
+        return $this->hasMany(Ausencia::class);
+    }
+
     public function solicitudesVacaciones(): HasMany
     {
         return $this->hasMany(SolicitudVacaciones::class);
