@@ -254,19 +254,34 @@ new class extends Component {
     {{-- Resumen semáforo --}}
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
         <button wire:click="$set('filtroEstado', 'vigente')"
-                class="text-left bg-surface border border-line rounded-xl p-4 border-l-4 border-l-success hover:shadow-sm">
-            <div class="text-sm text-muted">🟢 Vigentes</div>
-            <div class="text-2xl font-bold text-ink tabular-nums">{{ $resumen['vigente'] }}</div>
+                class="flex items-center gap-3 text-left bg-surface border border-line rounded-xl p-4 border-l-4 border-l-success hover:shadow-sm transition-shadow">
+            <span class="inline-flex items-center justify-center w-11 h-11 rounded-full bg-success-tint text-success shrink-0">
+                <x-icon name="shield-check" class="w-6 h-6" />
+            </span>
+            <div>
+                <div class="text-sm text-muted">Vigentes</div>
+                <div class="text-2xl font-bold text-ink tabular-nums leading-tight">{{ $resumen['vigente'] }}</div>
+            </div>
         </button>
         <button wire:click="$set('filtroEstado', 'por_vencer')"
-                class="text-left bg-surface border border-line rounded-xl p-4 border-l-4 border-l-warning hover:shadow-sm">
-            <div class="text-sm text-muted">🟡 Por vencer</div>
-            <div class="text-2xl font-bold text-ink tabular-nums">{{ $resumen['por_vencer'] }}</div>
+                class="flex items-center gap-3 text-left bg-surface border border-line rounded-xl p-4 border-l-4 border-l-warning hover:shadow-sm transition-shadow">
+            <span class="inline-flex items-center justify-center w-11 h-11 rounded-full bg-warning-tint text-warning shrink-0">
+                <x-icon name="clock" class="w-6 h-6" />
+            </span>
+            <div>
+                <div class="text-sm text-muted">Por vencer</div>
+                <div class="text-2xl font-bold text-ink tabular-nums leading-tight">{{ $resumen['por_vencer'] }}</div>
+            </div>
         </button>
         <button wire:click="$set('filtroEstado', 'vencido')"
-                class="text-left bg-surface border border-line rounded-xl p-4 border-l-4 border-l-danger hover:shadow-sm">
-            <div class="text-sm text-muted">🔴 Vencidos</div>
-            <div class="text-2xl font-bold text-ink tabular-nums">{{ $resumen['vencido'] }}</div>
+                class="flex items-center gap-3 text-left bg-surface border border-line rounded-xl p-4 border-l-4 border-l-danger hover:shadow-sm transition-shadow">
+            <span class="inline-flex items-center justify-center w-11 h-11 rounded-full bg-danger-tint text-danger shrink-0">
+                <x-icon name="alert" class="w-6 h-6" />
+            </span>
+            <div>
+                <div class="text-sm text-muted">Vencidos</div>
+                <div class="text-2xl font-bold text-ink tabular-nums leading-tight">{{ $resumen['vencido'] }}</div>
+            </div>
         </button>
     </div>
 
@@ -280,9 +295,9 @@ new class extends Component {
 
         <select wire:model.live="filtroEstado" class="rounded-lg border-line bg-surface text-sm text-ink focus:border-primary focus:ring-primary">
             <option value="">Todos los estados</option>
-            <option value="vigente">🟢 Vigentes</option>
-            <option value="por_vencer">🟡 Por vencer</option>
-            <option value="vencido">🔴 Vencidos</option>
+            <option value="vigente">Vigentes</option>
+            <option value="por_vencer">Por vencer</option>
+            <option value="vencido">Vencidos</option>
             <option value="sin_vigencia">Sin vigencia</option>
         </select>
 

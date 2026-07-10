@@ -32,19 +32,34 @@
             @endphp
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <a href="{{ route('documentos.index', ['filtroEstado' => 'vigente']) }}"
-                   class="bg-surface border border-line rounded-xl p-4 border-l-4 border-l-success hover:shadow-sm">
-                    <div class="text-sm text-muted">🟢 Documentos vigentes</div>
-                    <div class="text-2xl font-bold text-ink tabular-nums">{{ $vig }}</div>
+                   class="flex items-center gap-3 bg-surface border border-line rounded-xl p-4 border-l-4 border-l-success hover:shadow-sm transition-shadow">
+                    <span class="inline-flex items-center justify-center w-11 h-11 rounded-full bg-success-tint text-success shrink-0">
+                        <x-icon name="shield-check" class="w-6 h-6" />
+                    </span>
+                    <div>
+                        <div class="text-sm text-muted">Documentos vigentes</div>
+                        <div class="text-2xl font-bold text-ink tabular-nums leading-tight">{{ $vig }}</div>
+                    </div>
                 </a>
                 <a href="{{ route('documentos.index', ['filtroEstado' => 'por_vencer']) }}"
-                   class="bg-surface border border-line rounded-xl p-4 border-l-4 border-l-warning hover:shadow-sm">
-                    <div class="text-sm text-muted">🟡 Por vencer</div>
-                    <div class="text-2xl font-bold text-ink tabular-nums">{{ $porV }}</div>
+                   class="flex items-center gap-3 bg-surface border border-line rounded-xl p-4 border-l-4 border-l-warning hover:shadow-sm transition-shadow">
+                    <span class="inline-flex items-center justify-center w-11 h-11 rounded-full bg-warning-tint text-warning shrink-0">
+                        <x-icon name="clock" class="w-6 h-6" />
+                    </span>
+                    <div>
+                        <div class="text-sm text-muted">Por vencer</div>
+                        <div class="text-2xl font-bold text-ink tabular-nums leading-tight">{{ $porV }}</div>
+                    </div>
                 </a>
                 <a href="{{ route('documentos.index', ['filtroEstado' => 'vencido']) }}"
-                   class="bg-surface border border-line rounded-xl p-4 border-l-4 border-l-danger hover:shadow-sm">
-                    <div class="text-sm text-muted">🔴 Vencidos</div>
-                    <div class="text-2xl font-bold text-ink tabular-nums">{{ $venc }}</div>
+                   class="flex items-center gap-3 bg-surface border border-line rounded-xl p-4 border-l-4 border-l-danger hover:shadow-sm transition-shadow">
+                    <span class="inline-flex items-center justify-center w-11 h-11 rounded-full bg-danger-tint text-danger shrink-0">
+                        <x-icon name="alert" class="w-6 h-6" />
+                    </span>
+                    <div>
+                        <div class="text-sm text-muted">Vencidos</div>
+                        <div class="text-2xl font-bold text-ink tabular-nums leading-tight">{{ $venc }}</div>
+                    </div>
                 </a>
             </div>
 

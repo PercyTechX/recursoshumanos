@@ -43,9 +43,14 @@ new class extends Component {
 
     {{-- Resumen --}}
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
-        <div class="bg-surface border border-line rounded-xl p-4 border-l-4 border-l-warning">
-            <div class="text-sm text-muted">🟡 Total pendiente de descontar</div>
-            <div class="text-2xl font-bold text-ink tabular-nums">S/ {{ number_format((float) $totalPendiente, 2) }}</div>
+        <div class="flex items-center gap-3 bg-surface border border-line rounded-xl p-4 border-l-4 border-l-warning">
+            <span class="inline-flex items-center justify-center w-11 h-11 rounded-full bg-warning-tint text-warning shrink-0">
+                <x-icon name="cash" class="w-6 h-6" />
+            </span>
+            <div>
+                <div class="text-sm text-muted">Total pendiente de descontar</div>
+                <div class="text-2xl font-bold text-ink tabular-nums leading-tight">S/ {{ number_format((float) $totalPendiente, 2) }}</div>
+            </div>
         </div>
     </div>
 
@@ -92,7 +97,9 @@ new class extends Component {
                         <td class="px-4 py-3 text-right">
                             @if ($d->estado === 'pendiente')
                                 <button wire:click="marcarAplicado({{ $d->id }})" wire:confirm="¿Marcar este descuento como aplicado en planilla?"
-                                        class="text-primary hover:underline text-sm font-medium">Marcar aplicado</button>
+                                        class="inline-flex items-center gap-1.5 rounded-lg border border-line text-primary hover:bg-canvas text-sm font-medium px-3 py-1.5" title="Marcar como aplicado en planilla">
+                                    <x-icon name="check" class="w-4 h-4" /> Marcar aplicado
+                                </button>
                             @else
                                 <span class="text-faint">—</span>
                             @endif
