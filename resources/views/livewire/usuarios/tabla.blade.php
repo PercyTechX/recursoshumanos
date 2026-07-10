@@ -85,6 +85,7 @@ new class extends Component {
             $roles = $roles->reject(fn ($r) => $r === 'SuperAdmin');
         }
 
+        abort_unless(auth()->user()->can($this->editandoId ? 'usuarios.editar' : 'usuarios.crear'), 403);
         $u = User::findOrNew($this->editandoId);
         abort_unless($this->puedeGestionar($u), 403);
 
@@ -120,6 +121,7 @@ new class extends Component {
 
     public function resetearPassword(): void
     {
+        abort_unless(auth()->user()->can('usuarios.editar'), 403);
         $this->validate(['nuevaPassword' => ['required', 'string', 'min:8']], [], ['nuevaPassword' => 'contraseña']);
         $u = User::findOrFail($this->resetId);
         abort_unless($this->puedeGestionar($u), 403);
@@ -130,6 +132,7 @@ new class extends Component {
 
     public function toggleActivo(int $id): void
     {
+        abort_unless(auth()->user()->can('usuarios.editar'), 403);
         $u = User::findOrFail($id);
         abort_unless($this->puedeGestionar($u), 403);
         if ($u->id === auth()->id()) {
@@ -143,6 +146,7 @@ new class extends Component {
 
     public function eliminar(int $id): void
     {
+        abort_unless(auth()->user()->can('usuarios.eliminar'), 403);
         $u = User::findOrFail($id);
         abort_unless($this->puedeGestionar($u), 403);
         if ($u->id === auth()->id()) {
@@ -200,9 +204,11 @@ new class extends Component {
             <input type="text" wire:model.live.debounce.400ms="buscar" placeholder="Buscar por nombre o correo…"
                    class="w-full bg-transparent border-0 p-0 text-sm text-ink placeholder:text-faint focus:ring-0">
         </div>
-        <button wire:click="nuevo" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
-            <x-icon name="plus" class="w-4 h-4" /> Nuevo usuario
-        </button>
+        @can('usuarios.crear')
+            <button wire:click="nuevo" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
+                <x-icon name="plus" class="w-4 h-4" /> Nuevo usuario
+            </button>
+        @endcan
     </div>
 
     <div class="overflow-x-auto rounded-xl border border-line bg-surface">
@@ -243,18 +249,22 @@ new class extends Component {
                         <td class="px-4 py-3">
                             <div class="inline-flex items-center gap-1 justify-end w-full">
                                 @php $btn = 'inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-canvas transition-colors'; @endphp
-                                <button wire:click="abrirReset({{ $u->id }})" class="{{ $btn }} text-muted hover:text-primary" title="Restablecer contraseña">
-                                    <x-icon name="key" />
-                                </button>
-                                <button wire:click="toggleActivo({{ $u->id }})" class="{{ $btn }} {{ $u->activo ? 'text-warning' : 'text-success' }}" title="{{ $u->activo ? 'Desactivar' : 'Activar' }}">
-                                    <x-icon name="{{ $u->activo ? 'ban' : 'check' }}" />
-                                </button>
-                                <button wire:click="editar({{ $u->id }})" class="{{ $btn }} text-primary" title="Editar">
-                                    <x-icon name="pencil" />
-                                </button>
-                                <button wire:click="eliminar({{ $u->id }})" wire:confirm="¿Eliminar el usuario {{ $u->name }}?" class="{{ $btn }} text-danger" title="Eliminar">
-                                    <x-icon name="trash" />
-                                </button>
+                                @can('usuarios.editar')
+                                    <button wire:click="abrirReset({{ $u->id }})" class="{{ $btn }} text-muted hover:text-primary" title="Restablecer contraseña">
+                                        <x-icon name="key" />
+                                    </button>
+                                    <button wire:click="toggleActivo({{ $u->id }})" class="{{ $btn }} {{ $u->activo ? 'text-warning' : 'text-success' }}" title="{{ $u->activo ? 'Desactivar' : 'Activar' }}">
+                                        <x-icon name="{{ $u->activo ? 'ban' : 'check' }}" />
+                                    </button>
+                                    <button wire:click="editar({{ $u->id }})" class="{{ $btn }} text-primary" title="Editar">
+                                        <x-icon name="pencil" />
+                                    </button>
+                                @endcan
+                                @can('usuarios.eliminar')
+                                    <button wire:click="eliminar({{ $u->id }})" wire:confirm="¿Eliminar el usuario {{ $u->name }}?" class="{{ $btn }} text-danger" title="Eliminar">
+                                        <x-icon name="trash" />
+                                    </button>
+                                @endcan
                             </div>
                         </td>
                     </tr>

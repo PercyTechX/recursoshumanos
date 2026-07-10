@@ -28,10 +28,25 @@
 - No puedes **desactivarte ni eliminarte** a ti mismo.
 - No se puede eliminar al **último** SuperAdmin.
 
+## Roles y accesos (matriz módulo × acción) ✅
+
+Pantalla **"Roles y accesos"** (menú, solo SuperAdmin) para configurar accesos sin
+tocar código:
+
+- **Permisos** = `<modulo>.<accion>` definidos en `config/permisos.php`
+  (empleados, documentos, doc. compartidos, activos, vacaciones, ausencias,
+  descuentos, usuarios × ver/crear/editar/eliminar/… + acciones propias como
+  `documentos.avisar`, `vacaciones.aprobar`, `activos.asignar`, `descuentos.aplicar`).
+- **Crear/renombrar roles** y marcar con checkboxes qué **módulos y acciones** puede
+  cada rol (los roles del sistema no se eliminan).
+- **Se respeta en todos lados:** el **menú** y las **rutas** usan `@can`/`role_or_permission`
+  (solo ves los módulos permitidos) y cada **acción** en las pantallas está protegida
+  (`@can` en el botón + `abort_unless` en el método). SuperAdmin pasa siempre.
+- **Defaults** en `CatalogoSeeder` (solo si el rol no tiene permisos aún, para no
+  pisar lo que se configure desde la pantalla).
+
 ## Pendiente / siguiente
 
-- **Permisos finos** (matriz `permission` de spatie: `vacaciones.aprobar`,
-  `planilla.ver`, `backups.gestionar`…) para configurar accesos sin tocar código.
 - **Portal del trabajador** (autoservicio con el empleado vinculado): mis vacaciones,
   mis ausencias, mis boletas.
 - **Backups** (exportar BD .sql + archivos .zip en PHP puro, para SuperAdmin).

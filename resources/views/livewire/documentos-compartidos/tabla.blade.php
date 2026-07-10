@@ -67,6 +67,7 @@ new class extends Component {
     /** Renovar = nuevo documento con las MISMAS coberturas y el MISMO grupo, pero vigencia y archivo nuevos. */
     public function renovar(int $id): void
     {
+        abort_unless(auth()->user()->can('documentos_compartidos.crear'), 403);
         $this->cargar($id, renovar: true);
     }
 
@@ -98,6 +99,7 @@ new class extends Component {
 
     public function guardar(): void
     {
+        abort_unless(auth()->user()->can($this->editandoId ? 'documentos_compartidos.editar' : 'documentos_compartidos.crear'), 403);
         $datos = $this->validate();
 
         $doc = DocumentoCompartido::findOrNew($this->editandoId);
@@ -136,6 +138,7 @@ new class extends Component {
 
     public function eliminar(int $id): void
     {
+        abort_unless(auth()->user()->can('documentos_compartidos.eliminar'), 403);
         $doc = DocumentoCompartido::findOrFail($id);
         if ($doc->archivo_path) {
             Storage::disk('public')->delete($doc->archivo_path);
@@ -181,9 +184,11 @@ new class extends Component {
         <p class="text-sm text-muted">
             Un solo archivo (SCTR, póliza, homologación) que ampara a <strong>varias personas</strong> a la vez.
         </p>
-        <button wire:click="nuevo" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
-            <x-icon name="plus" class="w-4 h-4" /> Nuevo documento compartido
-        </button>
+        @can('documentos_compartidos.crear')
+            <button wire:click="nuevo" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
+                <x-icon name="plus" class="w-4 h-4" /> Nuevo documento compartido
+            </button>
+        @endcan
     </div>
 
     <div class="overflow-x-auto rounded-xl border border-line bg-surface">
@@ -229,15 +234,21 @@ new class extends Component {
                         <td class="px-4 py-3">
                             <div class="inline-flex items-center gap-1 justify-end w-full">
                                 @php $btn = 'inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-canvas transition-colors'; @endphp
-                                <button wire:click="renovar({{ $d->id }})" class="{{ $btn }} text-success" title="Renovar (siguiente periodo, mismo grupo)">
-                                    <x-icon name="refresh" />
-                                </button>
-                                <button wire:click="editar({{ $d->id }})" class="{{ $btn }} text-primary" title="Editar">
-                                    <x-icon name="pencil" />
-                                </button>
-                                <button wire:click="eliminar({{ $d->id }})" wire:confirm="¿Eliminar este documento compartido?" class="{{ $btn }} text-danger" title="Eliminar">
-                                    <x-icon name="trash" />
-                                </button>
+                                @can('documentos_compartidos.crear')
+                                    <button wire:click="renovar({{ $d->id }})" class="{{ $btn }} text-success" title="Renovar (siguiente periodo, mismo grupo)">
+                                        <x-icon name="refresh" />
+                                    </button>
+                                @endcan
+                                @can('documentos_compartidos.editar')
+                                    <button wire:click="editar({{ $d->id }})" class="{{ $btn }} text-primary" title="Editar">
+                                        <x-icon name="pencil" />
+                                    </button>
+                                @endcan
+                                @can('documentos_compartidos.eliminar')
+                                    <button wire:click="eliminar({{ $d->id }})" wire:confirm="¿Eliminar este documento compartido?" class="{{ $btn }} text-danger" title="Eliminar">
+                                        <x-icon name="trash" />
+                                    </button>
+                                @endcan
                             </div>
                         </td>
                     </tr>

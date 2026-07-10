@@ -23,34 +23,51 @@ Route::post('logout', function (Logout $logout) {
     return redirect('/');
 })->middleware('auth')->name('logout');
 
-// Gestión de usuarios (acceso: SuperAdmin, RRHH)
-Route::middleware(['auth', 'role:SuperAdmin|RRHH'])->group(function () {
-    Route::view('usuarios', 'usuarios.index')->name('usuarios.index');
-});
+// Acceso por PERMISO de cada módulo (configurable desde "Roles y accesos").
+// SuperAdmin siempre pasa (role_or_permission incluye el rol SuperAdmin).
+Route::middleware('auth')->group(function () {
+    // Roles y accesos (solo SuperAdmin)
+    Route::middleware('role:SuperAdmin')->group(function () {
+        Route::view('roles', 'roles.index')->name('roles.index');
+    });
 
-// Módulos RRHH (acceso: RRHH, Gerencia, Supervisor)
-Route::middleware(['auth', 'role:SuperAdmin|RRHH|Gerencia|Supervisor'])->group(function () {
-    Route::view('empleados', 'empleados.index')->name('empleados.index');
-    Route::get('empleados/exportar', [EmpleadoController::class, 'exportar'])->name('empleados.exportar');
-    Route::get('empleados/{empleado}/hoja-ruta', fn (\App\Models\Empleado $empleado) => view('empleados.hoja-ruta', compact('empleado')))
-        ->name('empleados.hoja-ruta');
-    Route::get('empleados/{empleado}', fn (\App\Models\Empleado $empleado) => view('empleados.show', compact('empleado')))
-        ->name('empleados.show');
+    Route::middleware('role_or_permission:SuperAdmin|usuarios.ver')->group(function () {
+        Route::view('usuarios', 'usuarios.index')->name('usuarios.index');
+    });
 
-    Route::view('documentos', 'documentos.index')->name('documentos.index');
-    Route::get('documentos/exportar', [DocumentoController::class, 'exportar'])->name('documentos.exportar');
-    Route::view('documentos-compartidos', 'documentos-compartidos.index')->name('documentos-compartidos.index');
+    Route::middleware('role_or_permission:SuperAdmin|empleados.ver')->group(function () {
+        Route::view('empleados', 'empleados.index')->name('empleados.index');
+        Route::get('empleados/exportar', [EmpleadoController::class, 'exportar'])->name('empleados.exportar');
+        Route::get('empleados/{empleado}/hoja-ruta', fn (\App\Models\Empleado $empleado) => view('empleados.hoja-ruta', compact('empleado')))
+            ->name('empleados.hoja-ruta');
+        Route::get('empleados/{empleado}', fn (\App\Models\Empleado $empleado) => view('empleados.show', compact('empleado')))
+            ->name('empleados.show');
+    });
 
-    Route::view('activos', 'activos.index')->name('activos.index');
+    Route::middleware('role_or_permission:SuperAdmin|documentos.ver')->group(function () {
+        Route::view('documentos', 'documentos.index')->name('documentos.index');
+        Route::get('documentos/exportar', [DocumentoController::class, 'exportar'])->name('documentos.exportar');
+    });
 
-    Route::view('vacaciones', 'vacaciones.index')->name('vacaciones.index');
+    Route::middleware('role_or_permission:SuperAdmin|documentos_compartidos.ver')->group(function () {
+        Route::view('documentos-compartidos', 'documentos-compartidos.index')->name('documentos-compartidos.index');
+    });
 
-    Route::view('ausencias', 'ausencias.index')->name('ausencias.index');
-});
+    Route::middleware('role_or_permission:SuperAdmin|activos.ver')->group(function () {
+        Route::view('activos', 'activos.index')->name('activos.index');
+    });
 
-// Descuentos — visible para Contador (y RRHH/Gerencia)
-Route::middleware(['auth', 'role:SuperAdmin|Contador|RRHH|Gerencia'])->group(function () {
-    Route::view('descuentos', 'descuentos.index')->name('descuentos.index');
+    Route::middleware('role_or_permission:SuperAdmin|vacaciones.ver')->group(function () {
+        Route::view('vacaciones', 'vacaciones.index')->name('vacaciones.index');
+    });
+
+    Route::middleware('role_or_permission:SuperAdmin|ausencias.ver')->group(function () {
+        Route::view('ausencias', 'ausencias.index')->name('ausencias.index');
+    });
+
+    Route::middleware('role_or_permission:SuperAdmin|descuentos.ver')->group(function () {
+        Route::view('descuentos', 'descuentos.index')->name('descuentos.index');
+    });
 });
 
 /*

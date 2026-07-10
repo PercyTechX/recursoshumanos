@@ -13,6 +13,7 @@ new class extends Component {
 
     public function marcarAplicado(int $id): void
     {
+        abort_unless(auth()->user()->can('descuentos.aplicar'), 403);
         Descuento::whereKey($id)->update(['estado' => Descuento::APLICADO]);
         session()->flash('ok', 'Descuento marcado como aplicado.');
     }
@@ -96,10 +97,14 @@ new class extends Component {
                         </td>
                         <td class="px-4 py-3 text-right">
                             @if ($d->estado === 'pendiente')
-                                <button wire:click="marcarAplicado({{ $d->id }})" wire:confirm="¿Marcar este descuento como aplicado en planilla?"
-                                        class="inline-flex items-center gap-1.5 rounded-lg border border-line text-primary hover:bg-canvas text-sm font-medium px-3 py-1.5" title="Marcar como aplicado en planilla">
-                                    <x-icon name="check" class="w-4 h-4" /> Marcar aplicado
-                                </button>
+                                @can('descuentos.aplicar')
+                                    <button wire:click="marcarAplicado({{ $d->id }})" wire:confirm="¿Marcar este descuento como aplicado en planilla?"
+                                            class="inline-flex items-center gap-1.5 rounded-lg border border-line text-primary hover:bg-canvas text-sm font-medium px-3 py-1.5" title="Marcar como aplicado en planilla">
+                                        <x-icon name="check" class="w-4 h-4" /> Marcar aplicado
+                                    </button>
+                                @else
+                                    <span class="text-faint">—</span>
+                                @endcan
                             @else
                                 <span class="text-faint">—</span>
                             @endif

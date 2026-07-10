@@ -156,6 +156,7 @@ new class extends Component {
 
     public function guardar(): void
     {
+        abort_unless(auth()->user()->can($this->editandoId ? 'empleados.editar' : 'empleados.crear'), 403);
         $data = $this->validate();
 
         // Si está activo, no debe quedar fecha de cese
@@ -183,6 +184,7 @@ new class extends Component {
 
     public function eliminar(int $id): void
     {
+        abort_unless(auth()->user()->can('empleados.eliminar'), 403);
         Empleado::findOrFail($id)->delete();
         session()->flash('ok', 'Empleado eliminado.');
     }
@@ -255,15 +257,19 @@ new class extends Component {
             <option value="cesado">Cesados</option>
         </select>
 
-        <button wire:click="nuevo"
-                class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
-            <x-icon name="plus" class="w-4 h-4" /> Nuevo
-        </button>
+        @can('empleados.crear')
+            <button wire:click="nuevo"
+                    class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
+                <x-icon name="plus" class="w-4 h-4" /> Nuevo
+            </button>
+        @endcan
 
-        <a href="{{ route('empleados.exportar', ['buscar' => $buscar, 'situacion' => $filtroSituacion]) }}"
-           class="inline-flex items-center gap-1.5 rounded-lg bg-excel hover:brightness-95 text-white text-sm font-semibold px-4 py-2">
-            <x-icon name="download" class="w-4 h-4" /> Exportar a Excel
-        </a>
+        @can('empleados.exportar')
+            <a href="{{ route('empleados.exportar', ['buscar' => $buscar, 'situacion' => $filtroSituacion]) }}"
+               class="inline-flex items-center gap-1.5 rounded-lg bg-excel hover:brightness-95 text-white text-sm font-semibold px-4 py-2">
+                <x-icon name="download" class="w-4 h-4" /> Exportar a Excel
+            </a>
+        @endcan
     </div>
 
     {{-- Tabla --}}
@@ -309,13 +315,17 @@ new class extends Component {
                                 <a href="{{ route('empleados.show', $e) }}" wire:navigate class="{{ $btn }} text-muted hover:text-primary" title="Ver expediente">
                                     <x-icon name="eye" />
                                 </a>
-                                <button wire:click="editar({{ $e->id }})" class="{{ $btn }} text-primary" title="Editar">
-                                    <x-icon name="pencil" />
-                                </button>
-                                <button wire:click="eliminar({{ $e->id }})" wire:confirm="¿Eliminar a {{ $e->nombres }} {{ $e->apellidos }}?"
-                                        class="{{ $btn }} text-danger" title="Eliminar">
-                                    <x-icon name="trash" />
-                                </button>
+                                @can('empleados.editar')
+                                    <button wire:click="editar({{ $e->id }})" class="{{ $btn }} text-primary" title="Editar">
+                                        <x-icon name="pencil" />
+                                    </button>
+                                @endcan
+                                @can('empleados.eliminar')
+                                    <button wire:click="eliminar({{ $e->id }})" wire:confirm="¿Eliminar a {{ $e->nombres }} {{ $e->apellidos }}?"
+                                            class="{{ $btn }} text-danger" title="Eliminar">
+                                        <x-icon name="trash" />
+                                    </button>
+                                @endcan
                             </div>
                         </td>
                     </tr>

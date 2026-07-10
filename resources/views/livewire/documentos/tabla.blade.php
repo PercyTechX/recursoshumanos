@@ -78,6 +78,7 @@ new class extends Component {
 
     public function guardar(): void
     {
+        abort_unless(auth()->user()->can($this->editandoId ? 'documentos.editar' : 'documentos.crear'), 403);
         $data = $this->validate();
 
         $payload = [
@@ -102,6 +103,7 @@ new class extends Component {
 
     public function eliminar(int $id): void
     {
+        abort_unless(auth()->user()->can('documentos.eliminar'), 403);
         Documento::findOrFail($id)->delete();
         session()->flash('ok', 'Documento eliminado.');
     }
@@ -109,6 +111,7 @@ new class extends Component {
     /** Deja registro de que se compartió el aviso por WhatsApp (el destinatario lo elige el usuario). */
     public function registrarAviso(int $id): void
     {
+        abort_unless(auth()->user()->can('documentos.avisar'), 403);
         $doc = Documento::with(['empleado.supervisor', 'tipoDocumento'])->findOrFail($id);
 
         if (! in_array($doc->estado, ['por_vencer', 'vencido'], true)) {
@@ -313,9 +316,11 @@ new class extends Component {
             Solo vigentes
         </label>
 
-        <button wire:click="nuevo" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
-            <x-icon name="plus" class="w-4 h-4" /> Nuevo
-        </button>
+        @can('documentos.crear')
+            <button wire:click="nuevo" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
+                <x-icon name="plus" class="w-4 h-4" /> Nuevo
+            </button>
+        @endcan
 
         <a href="{{ route('documentos.exportar', ['buscar' => $buscar, 'estado' => $filtroEstado, 'tipo' => $filtroTipo]) }}"
            class="inline-flex items-center gap-1.5 rounded-lg bg-excel hover:brightness-95 text-white text-sm font-semibold px-4 py-2">
@@ -389,23 +394,29 @@ new class extends Component {
                             <div class="inline-flex items-center gap-1 justify-end w-full">
                                 @php $btn = 'inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-canvas transition-colors'; @endphp
                                 @if (in_array($d->estado, ['por_vencer', 'vencido'], true))
-                                    <a href="{{ $d->urlWhatsapp() }}" target="_blank"
-                                       wire:click="registrarAviso({{ $d->id }})"
-                                       class="{{ $btn }} text-[#25D366]" title="Avisar al supervisor por WhatsApp">
-                                        <x-icon name="whatsapp" />
-                                    </a>
+                                    @can('documentos.avisar')
+                                        <a href="{{ $d->urlWhatsapp() }}" target="_blank"
+                                           wire:click="registrarAviso({{ $d->id }})"
+                                           class="{{ $btn }} text-[#25D366]" title="Avisar al supervisor por WhatsApp">
+                                            <x-icon name="whatsapp" />
+                                        </a>
+                                    @endcan
                                 @endif
                                 <button wire:click="verHistorial({{ $d->empleado_id }}, {{ $d->tipo_documento_id }})"
                                         class="{{ $btn }} text-muted hover:text-primary" title="Ver historial del requisito">
                                     <x-icon name="history" />
                                 </button>
-                                <button wire:click="editar({{ $d->id }})" class="{{ $btn }} text-primary" title="Editar">
-                                    <x-icon name="pencil" />
-                                </button>
-                                <button wire:click="eliminar({{ $d->id }})" wire:confirm="¿Eliminar este documento?"
-                                        class="{{ $btn }} text-danger" title="Eliminar">
-                                    <x-icon name="trash" />
-                                </button>
+                                @can('documentos.editar')
+                                    <button wire:click="editar({{ $d->id }})" class="{{ $btn }} text-primary" title="Editar">
+                                        <x-icon name="pencil" />
+                                    </button>
+                                @endcan
+                                @can('documentos.eliminar')
+                                    <button wire:click="eliminar({{ $d->id }})" wire:confirm="¿Eliminar este documento?"
+                                            class="{{ $btn }} text-danger" title="Eliminar">
+                                        <x-icon name="trash" />
+                                    </button>
+                                @endcan
                             </div>
                         </td>
                     </tr>

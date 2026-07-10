@@ -35,7 +35,7 @@ new class extends Component {
 
     public function puedeDecidir(): bool
     {
-        return auth()->user()?->hasAnyRole(['RRHH', 'Gerencia', 'Supervisor']) ?? false;
+        return auth()->user()?->can('vacaciones.aprobar') ?? false;
     }
 
     public function nuevo(): void
@@ -47,6 +47,7 @@ new class extends Component {
 
     public function guardar(): void
     {
+        abort_unless(auth()->user()->can('vacaciones.crear'), 403);
         $datos = $this->validate([
             'empleado_id' => ['required', 'exists:empleados,id'],
             'fecha_inicio' => ['required', 'date'],
@@ -177,6 +178,7 @@ new class extends Component {
 
     public function cancelar(int $id): void
     {
+        abort_unless(auth()->user()->can('vacaciones.eliminar'), 403);
         $s = SolicitudVacaciones::findOrFail($id);
         if ($s->estado === SolicitudVacaciones::PENDIENTE) {
             $s->update(['estado' => SolicitudVacaciones::CANCELADA]);
@@ -230,7 +232,9 @@ new class extends Component {
             <option value="rechazada">Rechazadas</option>
             <option value="cancelada">Canceladas</option>
         </select>
-        <button wire:click="nuevo" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2"><x-icon name="plus" class="w-4 h-4" /> Nueva solicitud</button>
+        @can('vacaciones.crear')
+            <button wire:click="nuevo" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2"><x-icon name="plus" class="w-4 h-4" /> Nueva solicitud</button>
+        @endcan
     </div>
 
     <div class="overflow-x-auto rounded-xl border border-line bg-surface">
@@ -286,9 +290,11 @@ new class extends Component {
                                             <x-icon name="x" />
                                         </button>
                                     @endif
-                                    <button wire:click="cancelar({{ $s->id }})" wire:confirm="¿Cancelar esta solicitud?" class="{{ $btn }} text-muted" title="Cancelar solicitud">
-                                        <x-icon name="ban" />
-                                    </button>
+                                    @can('vacaciones.eliminar')
+                                        <button wire:click="cancelar({{ $s->id }})" wire:confirm="¿Cancelar esta solicitud?" class="{{ $btn }} text-muted" title="Cancelar solicitud">
+                                            <x-icon name="ban" />
+                                        </button>
+                                    @endcan
                                 @elseif ($s->estado === 'aprobada' && $this->puedeDecidir() && ! $s->interrumpida)
                                     <button wire:click="abrirRetorno({{ $s->id }})" class="{{ $btn }} text-warning" title="Retorno anticipado (la empresa lo hizo volver antes)">
                                         <x-icon name="return" />

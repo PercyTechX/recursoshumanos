@@ -77,6 +77,7 @@ new class extends Component {
 
     public function guardar(): void
     {
+        abort_unless(auth()->user()->can($this->editandoId ? 'activos.editar' : 'activos.crear'), 403);
         $data = $this->validate();
         Activo::updateOrCreate(['id' => $this->editandoId], $data);
         $this->mostrarForm = false;
@@ -86,6 +87,7 @@ new class extends Component {
 
     public function eliminar(int $id): void
     {
+        abort_unless(auth()->user()->can('activos.eliminar'), 403);
         Activo::findOrFail($id)->delete();
         session()->flash('ok', 'Activo eliminado.');
     }
@@ -113,6 +115,7 @@ new class extends Component {
 
     public function asignar(): void
     {
+        abort_unless(auth()->user()->can('activos.asignar'), 403);
         $this->validate([
             'asignEmpleadoId' => ['required', 'exists:empleados,id'],
             'firmaEntrega' => ['required', 'string'],
@@ -143,6 +146,7 @@ new class extends Component {
 
     public function devolver(): void
     {
+        abort_unless(auth()->user()->can('activos.asignar'), 403);
         $this->validate([
             'devEstado' => ['required', 'in:bueno,dañado,perdido'],
         ]);
@@ -248,7 +252,9 @@ new class extends Component {
             @endforeach
         </select>
 
-        <button wire:click="nuevo" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2"><x-icon name="plus" class="w-4 h-4" /> Nuevo activo</button>
+        @can('activos.crear')
+            <button wire:click="nuevo" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2"><x-icon name="plus" class="w-4 h-4" /> Nuevo activo</button>
+        @endcan
     </div>
 
     {{-- Tabla --}}
@@ -300,25 +306,31 @@ new class extends Component {
                         <td class="px-4 py-3">
                             <div class="inline-flex items-center gap-1 justify-end w-full">
                                 @php $btn = 'inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-canvas transition-colors'; @endphp
-                                @if ($a->estado === 'disponible')
-                                    <button wire:click="abrirAsignar({{ $a->id }})" class="{{ $btn }} text-primary" title="Asignar a un empleado">
-                                        <x-icon name="user-plus" />
-                                    </button>
-                                @elseif ($a->estado === 'asignado')
-                                    <button wire:click="abrirDevolver({{ $a->id }})" class="{{ $btn }} text-warning" title="Registrar devolución">
-                                        <x-icon name="return" />
-                                    </button>
-                                @endif
+                                @can('activos.asignar')
+                                    @if ($a->estado === 'disponible')
+                                        <button wire:click="abrirAsignar({{ $a->id }})" class="{{ $btn }} text-primary" title="Asignar a un empleado">
+                                            <x-icon name="user-plus" />
+                                        </button>
+                                    @elseif ($a->estado === 'asignado')
+                                        <button wire:click="abrirDevolver({{ $a->id }})" class="{{ $btn }} text-warning" title="Registrar devolución">
+                                            <x-icon name="return" />
+                                        </button>
+                                    @endif
+                                @endcan
                                 <button wire:click="verHistorial({{ $a->id }})" class="{{ $btn }} text-muted hover:text-primary" title="Trazabilidad">
                                     <x-icon name="history" />
                                 </button>
-                                <button wire:click="editar({{ $a->id }})" class="{{ $btn }} text-primary" title="Editar">
-                                    <x-icon name="pencil" />
-                                </button>
-                                <button wire:click="eliminar({{ $a->id }})" wire:confirm="¿Eliminar {{ $a->nombre }}?"
-                                        class="{{ $btn }} text-danger" title="Eliminar">
-                                    <x-icon name="trash" />
-                                </button>
+                                @can('activos.editar')
+                                    <button wire:click="editar({{ $a->id }})" class="{{ $btn }} text-primary" title="Editar">
+                                        <x-icon name="pencil" />
+                                    </button>
+                                @endcan
+                                @can('activos.eliminar')
+                                    <button wire:click="eliminar({{ $a->id }})" wire:confirm="¿Eliminar {{ $a->nombre }}?"
+                                            class="{{ $btn }} text-danger" title="Eliminar">
+                                        <x-icon name="trash" />
+                                    </button>
+                                @endcan
                             </div>
                         </td>
                     </tr>

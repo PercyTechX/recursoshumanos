@@ -61,6 +61,7 @@ new class extends Component {
 
     public function guardar(): void
     {
+        abort_unless(auth()->user()->can($this->editandoId ? 'ausencias.editar' : 'ausencias.crear'), 403);
         $datos = $this->validate([
             'empleado_id' => ['required', 'exists:empleados,id'],
             'tipo' => ['required', 'in:'.implode(',', array_keys(Ausencia::TIPOS))],
@@ -101,6 +102,7 @@ new class extends Component {
 
     public function eliminar(int $id): void
     {
+        abort_unless(auth()->user()->can('ausencias.eliminar'), 403);
         $a = Ausencia::findOrFail($id);
         if ($a->archivo_path) {
             Storage::disk('public')->delete($a->archivo_path);
@@ -157,9 +159,11 @@ new class extends Component {
                 <option value="{{ $k }}">{{ $t[0] }}</option>
             @endforeach
         </select>
-        <button wire:click="nuevo" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
-            <x-icon name="plus" class="w-4 h-4" /> Nueva ausencia
-        </button>
+        @can('ausencias.crear')
+            <button wire:click="nuevo" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
+                <x-icon name="plus" class="w-4 h-4" /> Nueva ausencia
+            </button>
+        @endcan
     </div>
 
     <div class="overflow-x-auto rounded-xl border border-line bg-surface">
@@ -202,12 +206,16 @@ new class extends Component {
                         <td class="px-4 py-3">
                             <div class="inline-flex items-center gap-1 justify-end w-full">
                                 @php $btn = 'inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-canvas transition-colors'; @endphp
-                                <button wire:click="editar({{ $a->id }})" class="{{ $btn }} text-primary" title="Editar">
-                                    <x-icon name="pencil" />
-                                </button>
-                                <button wire:click="eliminar({{ $a->id }})" wire:confirm="¿Eliminar esta ausencia?" class="{{ $btn }} text-danger" title="Eliminar">
-                                    <x-icon name="trash" />
-                                </button>
+                                @can('ausencias.editar')
+                                    <button wire:click="editar({{ $a->id }})" class="{{ $btn }} text-primary" title="Editar">
+                                        <x-icon name="pencil" />
+                                    </button>
+                                @endcan
+                                @can('ausencias.eliminar')
+                                    <button wire:click="eliminar({{ $a->id }})" wire:confirm="¿Eliminar esta ausencia?" class="{{ $btn }} text-danger" title="Eliminar">
+                                        <x-icon name="trash" />
+                                    </button>
+                                @endcan
                             </div>
                         </td>
                     </tr>
