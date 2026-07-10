@@ -6,6 +6,8 @@ use App\Models\Documento;
 use App\Models\Empleado;
 use App\Models\EntregaEpp;
 use App\Models\HojaRuta;
+use App\Models\MovimientoVacaciones;
+use App\Models\SolicitudVacaciones;
 use App\Models\TipoEpp;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Volt\Component;
@@ -116,6 +118,51 @@ new class extends Component {
         session()->flash('ok', 'Derechohabiente eliminado.');
     }
 
+    // ---- Vacaciones: registrar movimiento manual (apertura / devengado / ajuste) ----
+    public bool $mostrarMov = false;
+    public string $mov_tipo = 'apertura';
+    public string $mov_dias = '';
+    public string $mov_fecha = '';
+    public string $mov_observacion = '';
+
+    public function puedeGestionarVacaciones(): bool
+    {
+        return auth()->user()?->hasAnyRole(['RRHH', 'Gerencia']) ?? false;
+    }
+
+    public function abrirMov(): void
+    {
+        $this->reset(['mov_tipo', 'mov_dias', 'mov_fecha', 'mov_observacion']);
+        $this->mov_tipo = 'apertura';
+        $this->mov_fecha = now()->toDateString();
+        $this->resetErrorBag();
+        $this->mostrarMov = true;
+    }
+
+    public function guardarMov(): void
+    {
+        abort_unless($this->puedeGestionarVacaciones(), 403);
+
+        $datos = $this->validate([
+            'mov_tipo' => ['required', 'in:apertura,devengado,ajuste'],
+            'mov_dias' => ['required', 'numeric'],
+            'mov_fecha' => ['required', 'date'],
+            'mov_observacion' => ['nullable', 'string', 'max:200'],
+        ], [], ['mov_dias' => 'días']);
+
+        MovimientoVacaciones::create([
+            'empleado_id' => $this->empleadoId,
+            'fecha' => $datos['mov_fecha'],
+            'tipo' => $datos['mov_tipo'],
+            'dias' => $datos['mov_dias'],
+            'observacion' => $datos['mov_observacion'] ?: null,
+            'created_by' => auth()->id(),
+        ]);
+
+        $this->mostrarMov = false;
+        session()->flash('ok', 'Movimiento de vacaciones registrado.');
+    }
+
     private function guardarFirma(string $dataUrl, string $carpeta): ?string
     {
         if (! str_starts_with($dataUrl, 'data:image')) {
@@ -183,6 +230,11 @@ new class extends Component {
             'documentosCompartidos' => $empleado->documentosCompartidos()
                 ->with('coberturas.tipoDocumento')
                 ->orderByDesc('fecha_vencimiento')->get(),
+            'movimientosVac' => MovimientoVacaciones::where('empleado_id', $this->empleadoId)
+                ->orderByDesc('fecha')->orderByDesc('id')->get(),
+            'solicitudesVac' => SolicitudVacaciones::where('empleado_id', $this->empleadoId)
+                ->orderByDesc('fecha_inicio')->get(),
+            'saldoVac' => (float) MovimientoVacaciones::where('empleado_id', $this->empleadoId)->sum('dias'),
         ];
     }
 }; ?>
@@ -222,6 +274,7 @@ new class extends Component {
         <button @click="tab='familia'" :class="tab==='familia' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Familia ({{ $derechohabientes->count() }})</button>
         <button @click="tab='activos'" :class="tab==='activos' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Activos ({{ $asignaciones->whereNull('fecha_devolucion')->count() }})</button>
         <button @click="tab='epp'" :class="tab==='epp' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">EPP ({{ $entregasEpp->count() }})</button>
+        <button @click="tab='vacaciones'" :class="tab==='vacaciones' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Vacaciones</button>
         <button @click="tab='hojas'" :class="tab==='hojas' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Hojas de ruta ({{ $hojasRuta->count() }})</button>
     </div>
 
@@ -457,6 +510,85 @@ new class extends Component {
         </div>
     </section>
 
+    {{-- VACACIONES --}}
+    <section x-show="tab==='vacaciones'" x-cloak>
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div class="rounded-xl border border-line bg-surface px-5 py-3">
+                <div class="text-xs uppercase tracking-wide text-faint">Saldo de vacaciones</div>
+                <div class="text-2xl font-bold tabular-nums {{ $saldoVac < 0 ? 'text-danger' : 'text-success' }}">
+                    {{ number_format($saldoVac, 1) }} <span class="text-sm font-medium text-muted">días</span>
+                </div>
+            </div>
+            @if ($this->puedeGestionarVacaciones())
+                <button wire:click="abrirMov" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">+ Registrar movimiento</button>
+            @endif
+        </div>
+
+        {{-- Solicitudes --}}
+        <div class="bg-surface border border-line rounded-xl overflow-x-auto mb-5">
+            <div class="px-4 py-2 text-xs uppercase tracking-wide text-faint border-b border-line">Solicitudes</div>
+            <table class="w-full text-sm min-w-[520px]">
+                <thead>
+                    <tr class="text-left text-xs uppercase tracking-wide text-faint bg-canvas border-b border-line">
+                        <th class="px-4 py-3">Periodo</th>
+                        <th class="px-4 py-3 text-center">Días</th>
+                        <th class="px-4 py-3">Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($solicitudesVac as $s)
+                        <tr class="border-b border-line last:border-0">
+                            <td class="px-4 py-3 text-muted tabular-nums">{{ $s->fecha_inicio->format('d/m/Y') }} → {{ $s->fecha_fin->format('d/m/Y') }}</td>
+                            <td class="px-4 py-3 text-center tabular-nums">{{ $s->dias }}</td>
+                            <td class="px-4 py-3">
+                                @php
+                                    [$c, $t] = match ($s->estado) {
+                                        'aprobada' => ['bg-success-tint text-success', 'Aprobada'],
+                                        'rechazada' => ['bg-danger-tint text-danger', 'Rechazada'],
+                                        'cancelada' => ['bg-canvas text-faint', 'Cancelada'],
+                                        default => ['bg-warning-tint text-warning', 'Pendiente'],
+                                    };
+                                @endphp
+                                <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $c }}">{{ $t }}</span>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="3" class="px-4 py-6 text-center text-faint">Sin solicitudes.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        {{-- Libro mayor (movimientos) --}}
+        <div class="bg-surface border border-line rounded-xl overflow-x-auto">
+            <div class="px-4 py-2 text-xs uppercase tracking-wide text-faint border-b border-line">Libro mayor (movimientos)</div>
+            <table class="w-full text-sm min-w-[560px]">
+                <thead>
+                    <tr class="text-left text-xs uppercase tracking-wide text-faint bg-canvas border-b border-line">
+                        <th class="px-4 py-3">Fecha</th>
+                        <th class="px-4 py-3">Tipo</th>
+                        <th class="px-4 py-3 text-right">Días</th>
+                        <th class="px-4 py-3">Detalle</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($movimientosVac as $m)
+                        <tr class="border-b border-line last:border-0">
+                            <td class="px-4 py-3 text-muted tabular-nums">{{ $m->fecha->format('d/m/Y') }}</td>
+                            <td class="px-4 py-3 text-ink">{{ $m->tipo_label }}</td>
+                            <td class="px-4 py-3 text-right tabular-nums font-semibold {{ $m->dias < 0 ? 'text-danger' : 'text-success' }}">
+                                {{ $m->dias > 0 ? '+' : '' }}{{ number_format((float) $m->dias, 1) }}
+                            </td>
+                            <td class="px-4 py-3 text-muted">{{ $m->observacion ?? '—' }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="4" class="px-4 py-6 text-center text-faint">Sin movimientos. Registra la apertura del saldo.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </section>
+
     {{-- HOJAS DE RUTA --}}
     <section x-show="tab==='hojas'" x-cloak class="bg-surface border border-line rounded-xl overflow-x-auto">
         <table class="w-full text-sm min-w-[520px]">
@@ -546,6 +678,49 @@ new class extends Component {
                     </div>
                     <div class="flex justify-end gap-2 pt-1">
                         <button type="button" wire:click="$set('mostrarDh', false)" class="rounded-lg border border-line text-muted text-sm font-semibold px-4 py-2 hover:bg-canvas">Cancelar</button>
+                        <button type="submit" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+
+    {{-- Modal: Registrar movimiento de vacaciones --}}
+    @if ($mostrarMov)
+        <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/40 p-4">
+            <div class="w-full max-w-md mt-16 rounded-2xl bg-surface shadow-xl">
+                <div class="flex items-center justify-between border-b border-line px-6 py-4">
+                    <h3 class="text-lg font-semibold text-navy">Registrar movimiento de vacaciones</h3>
+                    <button wire:click="$set('mostrarMov', false)" class="text-faint hover:text-ink text-xl leading-none">&times;</button>
+                </div>
+                <form wire:submit="guardarMov" class="px-6 py-5 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-muted mb-1">Tipo *</label>
+                        <select wire:model="mov_tipo" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                            <option value="apertura">Apertura (saldo inicial a la fecha de corte)</option>
+                            <option value="devengado">Devengado (acumulado por tiempo trabajado)</option>
+                            <option value="ajuste">Ajuste (corrección + o −)</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Días *</label>
+                            <input type="number" step="0.5" wire:model="mov_dias" placeholder="Ej. 15 (o -3)" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                            @error('mov_dias') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Fecha *</label>
+                            <input type="date" wire:model="mov_fecha" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                            @error('mov_fecha') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+                    <p class="text-xs text-faint">Para descontar días usa números negativos (ej. un ajuste de −2). Los días gozados se generan solos al aprobar una solicitud.</p>
+                    <div>
+                        <label class="block text-sm font-medium text-muted mb-1">Observación</label>
+                        <input type="text" wire:model="mov_observacion" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" wire:click="$set('mostrarMov', false)" class="rounded-lg border border-line text-muted text-sm font-semibold px-4 py-2 hover:bg-canvas">Cancelar</button>
                         <button type="submit" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">Guardar</button>
                     </div>
                 </form>

@@ -37,6 +37,8 @@ Route::middleware(['auth', 'role:RRHH|Gerencia|Supervisor'])->group(function () 
     Route::view('documentos-compartidos', 'documentos-compartidos.index')->name('documentos-compartidos.index');
 
     Route::view('activos', 'activos.index')->name('activos.index');
+
+    Route::view('vacaciones', 'vacaciones.index')->name('vacaciones.index');
 });
 
 // Descuentos — visible para Contador (y RRHH/Gerencia)

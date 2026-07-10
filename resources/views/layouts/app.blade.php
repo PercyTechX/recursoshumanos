@@ -54,6 +54,10 @@
                            class="{{ $itemBase }} {{ request()->routeIs('activos.*') ? $itemOn : $itemOff }}">
                             <span>🔧</span> Activos
                         </a>
+                        <a href="{{ route('vacaciones.index') }}" wire:navigate
+                           class="{{ $itemBase }} {{ request()->routeIs('vacaciones.*') ? $itemOn : $itemOff }}">
+                            <span>🌴</span> Vacaciones
+                        </a>
                     @endhasanyrole
 
                     @hasanyrole('Contador|RRHH|Gerencia')
