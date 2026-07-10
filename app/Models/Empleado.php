@@ -100,6 +100,22 @@ class Empleado extends Model
         return $this->belongsToMany(DocumentoCompartido::class, 'documento_compartido_empleado');
     }
 
+    public function solicitudesVacaciones(): HasMany
+    {
+        return $this->hasMany(SolicitudVacaciones::class);
+    }
+
+    public function movimientosVacaciones(): HasMany
+    {
+        return $this->hasMany(MovimientoVacaciones::class);
+    }
+
+    /** Saldo de vacaciones = suma del libro mayor (apertura + devengado - gozado ± ajuste). */
+    public function getSaldoVacacionesAttribute(): float
+    {
+        return (float) $this->movimientosVacaciones()->sum('dias');
+    }
+
     // ---- Accessors ----
     public function getNombreCompletoAttribute(): string
     {
