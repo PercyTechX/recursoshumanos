@@ -243,7 +243,7 @@ new class extends Component {
     {{-- Barra de acciones --}}
     <div class="flex flex-wrap items-center gap-2 mb-4">
         <div class="flex-1 min-w-[180px] flex items-center gap-2 rounded-lg border border-line bg-canvas px-3 py-2">
-            <span class="text-faint">🔎</span>
+            <x-icon name="search" class="w-4 h-4 text-faint shrink-0" />
             <input type="text" wire:model.live.debounce.400ms="buscar" placeholder="Buscar por nombre o documento…"
                    class="w-full bg-transparent border-0 p-0 text-sm text-ink placeholder:text-faint focus:ring-0">
         </div>
@@ -256,13 +256,13 @@ new class extends Component {
         </select>
 
         <button wire:click="nuevo"
-                class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
-            + Nuevo
+                class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
+            <x-icon name="plus" class="w-4 h-4" /> Nuevo
         </button>
 
         <a href="{{ route('empleados.exportar', ['buscar' => $buscar, 'situacion' => $filtroSituacion]) }}"
-           class="rounded-lg bg-excel hover:brightness-95 text-white text-sm font-semibold px-4 py-2">
-            ⬇ Exportar a Excel
+           class="inline-flex items-center gap-1.5 rounded-lg bg-excel hover:brightness-95 text-white text-sm font-semibold px-4 py-2">
+            <x-icon name="download" class="w-4 h-4" /> Exportar a Excel
         </a>
     </div>
 
@@ -303,10 +303,20 @@ new class extends Component {
                                 </span>
                             @endif
                         </td>
-                        <td class="px-4 py-3 text-right whitespace-nowrap">
-                            <button wire:click="editar({{ $e->id }})" class="text-primary hover:underline text-sm font-medium">Editar</button>
-                            <button wire:click="eliminar({{ $e->id }})" wire:confirm="¿Eliminar a {{ $e->nombres }} {{ $e->apellidos }}?"
-                                    class="ml-3 text-danger hover:underline text-sm font-medium">Eliminar</button>
+                        <td class="px-4 py-3">
+                            <div class="inline-flex items-center gap-1 justify-end w-full">
+                                @php $btn = 'inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-canvas transition-colors'; @endphp
+                                <a href="{{ route('empleados.show', $e) }}" wire:navigate class="{{ $btn }} text-muted hover:text-primary" title="Ver expediente">
+                                    <x-icon name="eye" />
+                                </a>
+                                <button wire:click="editar({{ $e->id }})" class="{{ $btn }} text-primary" title="Editar">
+                                    <x-icon name="pencil" />
+                                </button>
+                                <button wire:click="eliminar({{ $e->id }})" wire:confirm="¿Eliminar a {{ $e->nombres }} {{ $e->apellidos }}?"
+                                        class="{{ $btn }} text-danger" title="Eliminar">
+                                    <x-icon name="trash" />
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 @empty

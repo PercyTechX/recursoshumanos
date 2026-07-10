@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Documento extends Model
 {
@@ -34,6 +35,45 @@ class Documento extends Model
     public function tipoDocumento(): BelongsTo
     {
         return $this->belongsTo(TipoDocumento::class);
+    }
+
+    public function avisos(): HasMany
+    {
+        return $this->hasMany(AvisoDocumento::class);
+    }
+
+    // ---- Aviso por WhatsApp ----
+
+    /** Texto del aviso listo para compartir por WhatsApp. */
+    public function mensajeWhatsapp(): string
+    {
+        $emp = $this->empleado;
+        $tipo = $this->tipoDocumento?->nombre ?? 'Documento';
+        $venc = optional($this->fecha_vencimiento)->format('d/m/Y') ?? 's/f';
+        $dias = $this->dias_para_vencer;
+
+        $estado = $this->estado === 'vencido'
+            ? ($dias !== null ? 'VENCIDO hace '.abs($dias).' día(s)' : 'VENCIDO')
+            : ($dias !== null ? 'por vencer en '.$dias.' día(s)' : 'por vencer');
+
+        $lineas = [
+            '*Aviso RRHH — Documento '.($this->estado === 'vencido' ? 'vencido' : 'por vencer').'*',
+            'Trabajador: '.trim(($emp?->nombres ?? '').' '.($emp?->apellidos ?? '')),
+            'Documento: '.$tipo,
+            'Vencimiento: '.$venc.' ('.$estado.')',
+        ];
+        if ($emp?->supervisor) {
+            $lineas[] = 'Supervisor: '.$emp->supervisor->nombres.' '.$emp->supervisor->apellidos;
+        }
+        $lineas[] = 'Por favor coordinar la renovación.';
+
+        return implode("\n", $lineas);
+    }
+
+    /** Enlace wa.me SIN número: WhatsApp abre y el usuario elige el contacto. */
+    public function urlWhatsapp(): string
+    {
+        return 'https://wa.me/?text='.rawurlencode($this->mensajeWhatsapp());
     }
 
     // ---- Semáforo 🚦 ----

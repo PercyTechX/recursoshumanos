@@ -1,12 +1,10 @@
 <?php
 
-use App\Mail\AvisoVencimientoDocumento;
 use App\Models\AvisoDocumento;
 use App\Models\Documento;
 use App\Models\Empleado;
 use App\Models\TipoDocumento;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\Mail;
 use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
 use Livewire\WithFileUploads;
@@ -108,44 +106,27 @@ new class extends Component {
         session()->flash('ok', 'Documento eliminado.');
     }
 
-    /** Envía un correo al supervisor del trabajador avisando del vencimiento. */
-    public function avisar(int $id): void
+    /** Deja registro de que se compartió el aviso por WhatsApp (el destinatario lo elige el usuario). */
+    public function registrarAviso(int $id): void
     {
-        $doc = Documento::with(['empleado.supervisor.user', 'tipoDocumento'])->findOrFail($id);
+        $doc = Documento::with(['empleado.supervisor', 'tipoDocumento'])->findOrFail($id);
 
         if (! in_array($doc->estado, ['por_vencer', 'vencido'], true)) {
-            session()->flash('error', 'Solo se avisa de documentos por vencer o vencidos.');
-
             return;
         }
-
-        $supervisor = $doc->empleado?->supervisor;
-        if (! $supervisor) {
-            session()->flash('error', 'El trabajador no tiene un supervisor asignado.');
-
-            return;
-        }
-
-        $email = $supervisor->correo ?: $supervisor->user?->email;
-        if (! $email) {
-            session()->flash('error', 'El supervisor no tiene un correo registrado.');
-
-            return;
-        }
-
-        Mail::to($email)->send(new AvisoVencimientoDocumento($doc));
 
         AvisoDocumento::create([
             'documento_id' => $doc->id,
             'empleado_id' => $doc->empleado_id,
-            'supervisor_id' => $supervisor->id,
-            'email_destino' => $email,
+            'supervisor_id' => $doc->empleado?->supervisor_id,
+            'canal' => 'whatsapp',
+            'destino' => null, // lo elige el usuario en WhatsApp
             'estado_documento' => $doc->estado,
             'dias' => $doc->dias_para_vencer,
             'enviado_por' => auth()->id(),
         ]);
 
-        session()->flash('ok', "Aviso enviado al supervisor ({$email}).");
+        session()->flash('ok', 'Aviso preparado y registrado. Elige el contacto en WhatsApp.');
     }
 
     public function resetForm(): void
@@ -205,7 +186,7 @@ new class extends Component {
 
         // Base (filtros que sí se pueden hacer en BD)
         $coleccion = Documento::query()
-            ->with(['empleado', 'tipoDocumento'])
+            ->with(['empleado.supervisor', 'tipoDocumento'])
             ->when($this->buscar, fn ($q) => $q->whereHas('empleado', fn ($e) => $e
                 ->where('nombres', 'like', '%'.$this->buscar.'%')
                 ->orWhere('apellidos', 'like', '%'.$this->buscar.'%')
@@ -292,7 +273,7 @@ new class extends Component {
     {{-- Barra de acciones --}}
     <div class="flex flex-wrap items-center gap-2 mb-4">
         <div class="flex-1 min-w-[180px] flex items-center gap-2 rounded-lg border border-line bg-canvas px-3 py-2">
-            <span class="text-faint">🔎</span>
+            <x-icon name="search" class="w-4 h-4 text-faint shrink-0" />
             <input type="text" wire:model.live.debounce.400ms="buscar" placeholder="Buscar por empleado o documento…"
                    class="w-full bg-transparent border-0 p-0 text-sm text-ink placeholder:text-faint focus:ring-0">
         </div>
@@ -317,13 +298,13 @@ new class extends Component {
             Solo vigentes
         </label>
 
-        <button wire:click="nuevo" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
-            + Nuevo
+        <button wire:click="nuevo" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
+            <x-icon name="plus" class="w-4 h-4" /> Nuevo
         </button>
 
         <a href="{{ route('documentos.exportar', ['buscar' => $buscar, 'estado' => $filtroEstado, 'tipo' => $filtroTipo]) }}"
-           class="rounded-lg bg-excel hover:brightness-95 text-white text-sm font-semibold px-4 py-2">
-            ⬇ Exportar a Excel
+           class="inline-flex items-center gap-1.5 rounded-lg bg-excel hover:brightness-95 text-white text-sm font-semibold px-4 py-2">
+            <x-icon name="download" class="w-4 h-4" /> Exportar a Excel
         </a>
     </div>
 
@@ -382,22 +363,35 @@ new class extends Component {
                         </td>
                         <td class="px-4 py-3">
                             @if ($d->archivo_path)
-                                <a href="{{ Storage::url($d->archivo_path) }}" target="_blank" class="text-primary hover:underline">Ver</a>
+                                <a href="{{ Storage::url($d->archivo_path) }}" target="_blank" class="inline-flex items-center gap-1 text-primary hover:underline" title="Ver archivo">
+                                    <x-icon name="eye" class="w-4 h-4" /> Ver
+                                </a>
                             @else
                                 <span class="text-faint">—</span>
                             @endif
                         </td>
-                        <td class="px-4 py-3 text-right whitespace-nowrap">
-                            @if (in_array($d->estado, ['por_vencer', 'vencido'], true))
-                                <button wire:click="avisar({{ $d->id }})"
-                                        wire:confirm="¿Enviar un correo al supervisor avisando de este documento?"
-                                        class="text-warning hover:underline text-sm font-medium" title="Avisar al supervisor por correo">✉ Avisar</button>
-                            @endif
-                            <button wire:click="verHistorial({{ $d->empleado_id }}, {{ $d->tipo_documento_id }})"
-                                    class="ml-3 text-muted hover:text-primary hover:underline text-sm font-medium" title="Ver todas las versiones de este requisito">Historial</button>
-                            <button wire:click="editar({{ $d->id }})" class="ml-3 text-primary hover:underline text-sm font-medium">Editar</button>
-                            <button wire:click="eliminar({{ $d->id }})" wire:confirm="¿Eliminar este documento?"
-                                    class="ml-3 text-danger hover:underline text-sm font-medium">Eliminar</button>
+                        <td class="px-4 py-3">
+                            <div class="inline-flex items-center gap-1 justify-end w-full">
+                                @php $btn = 'inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-canvas transition-colors'; @endphp
+                                @if (in_array($d->estado, ['por_vencer', 'vencido'], true))
+                                    <a href="{{ $d->urlWhatsapp() }}" target="_blank"
+                                       wire:click="registrarAviso({{ $d->id }})"
+                                       class="{{ $btn }} text-[#25D366]" title="Avisar al supervisor por WhatsApp">
+                                        <x-icon name="whatsapp" />
+                                    </a>
+                                @endif
+                                <button wire:click="verHistorial({{ $d->empleado_id }}, {{ $d->tipo_documento_id }})"
+                                        class="{{ $btn }} text-muted hover:text-primary" title="Ver historial del requisito">
+                                    <x-icon name="history" />
+                                </button>
+                                <button wire:click="editar({{ $d->id }})" class="{{ $btn }} text-primary" title="Editar">
+                                    <x-icon name="pencil" />
+                                </button>
+                                <button wire:click="eliminar({{ $d->id }})" wire:confirm="¿Eliminar este documento?"
+                                        class="{{ $btn }} text-danger" title="Eliminar">
+                                    <x-icon name="trash" />
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 @empty

@@ -10,7 +10,7 @@ class AvisoDocumento extends Model
     protected $table = 'avisos_documento';
 
     protected $fillable = [
-        'documento_id', 'empleado_id', 'supervisor_id', 'email_destino',
+        'documento_id', 'empleado_id', 'supervisor_id', 'canal', 'destino',
         'estado_documento', 'dias', 'enviado_por',
     ];
 

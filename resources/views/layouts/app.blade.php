@@ -34,36 +34,36 @@
                 <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
                     <a href="{{ route('dashboard') }}" wire:navigate
                        class="{{ $itemBase }} {{ request()->routeIs('dashboard') ? $itemOn : $itemOff }}">
-                        <span>🏠</span> Tablero
+                        <x-icon name="home" class="w-5 h-5 shrink-0" /> Tablero
                     </a>
 
                     @hasanyrole('RRHH|Gerencia|Supervisor')
                         <a href="{{ route('empleados.index') }}" wire:navigate
                            class="{{ $itemBase }} {{ request()->routeIs('empleados.*') ? $itemOn : $itemOff }}">
-                            <span>👥</span> Empleados
+                            <x-icon name="users" class="w-5 h-5 shrink-0" /> Empleados
                         </a>
                         <a href="{{ route('documentos.index') }}" wire:navigate
                            class="{{ $itemBase }} {{ request()->routeIs('documentos.index') || request()->routeIs('documentos.exportar') ? $itemOn : $itemOff }}">
-                            <span>📄</span> Documentos
+                            <x-icon name="document" class="w-5 h-5 shrink-0" /> Documentos
                         </a>
                         <a href="{{ route('documentos-compartidos.index') }}" wire:navigate
                            class="{{ $itemBase }} {{ request()->routeIs('documentos-compartidos.*') ? $itemOn : $itemOff }}">
-                            <span>📋</span> Doc. compartidos
+                            <x-icon name="clipboard" class="w-5 h-5 shrink-0" /> Doc. compartidos
                         </a>
                         <a href="{{ route('activos.index') }}" wire:navigate
                            class="{{ $itemBase }} {{ request()->routeIs('activos.*') ? $itemOn : $itemOff }}">
-                            <span>🔧</span> Activos
+                            <x-icon name="wrench" class="w-5 h-5 shrink-0" /> Activos
                         </a>
                         <a href="{{ route('vacaciones.index') }}" wire:navigate
                            class="{{ $itemBase }} {{ request()->routeIs('vacaciones.*') ? $itemOn : $itemOff }}">
-                            <span>🌴</span> Vacaciones
+                            <x-icon name="sun" class="w-5 h-5 shrink-0" /> Vacaciones
                         </a>
                     @endhasanyrole
 
                     @hasanyrole('Contador|RRHH|Gerencia')
                         <a href="{{ route('descuentos.index') }}" wire:navigate
                            class="{{ $itemBase }} {{ request()->routeIs('descuentos.*') ? $itemOn : $itemOff }}">
-                            <span>💸</span> Descuentos
+                            <x-icon name="cash" class="w-5 h-5 shrink-0" /> Descuentos
                         </a>
                     @endhasanyrole
                 </nav>

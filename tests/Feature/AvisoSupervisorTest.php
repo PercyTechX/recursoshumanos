@@ -2,14 +2,13 @@
 
 namespace Tests\Feature;
 
-use App\Mail\AvisoVencimientoDocumento;
+use App\Models\AvisoDocumento;
 use App\Models\Documento;
 use App\Models\Empleado;
 use App\Models\TipoDocumento;
 use App\Models\User;
 use Database\Seeders\CatalogoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Mail;
 use Livewire\Volt\Volt;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
@@ -47,30 +46,38 @@ class AvisoSupervisorTest extends TestCase
         ]);
     }
 
-    public function test_avisa_al_supervisor_por_correo(): void
+    public function test_registrar_aviso_deja_registro_whatsapp(): void
     {
-        Mail::fake();
         $this->admin();
-        $supervisor = Empleado::create(['numero_documento' => '99999999', 'nombres' => 'Jefe', 'apellidos' => 'Pérez', 'correo' => 'jefe@empresa.test']);
+        $supervisor = Empleado::create(['numero_documento' => '99999999', 'nombres' => 'Jefe', 'apellidos' => 'Pérez']);
         $doc = $this->docPorVencer($supervisor);
 
-        Volt::test('documentos.tabla')->call('avisar', $doc->id)->assertHasNoErrors();
+        Volt::test('documentos.tabla')->call('registrarAviso', $doc->id)->assertHasNoErrors();
 
-        Mail::assertSent(AvisoVencimientoDocumento::class, fn ($m) => $m->hasTo('jefe@empresa.test'));
         $this->assertDatabaseHas('avisos_documento', [
-            'documento_id' => $doc->id, 'email_destino' => 'jefe@empresa.test', 'estado_documento' => 'por_vencer',
+            'documento_id' => $doc->id, 'canal' => 'whatsapp',
+            'estado_documento' => 'por_vencer', 'supervisor_id' => $supervisor->id,
         ]);
     }
 
-    public function test_no_avisa_si_no_hay_supervisor(): void
+    public function test_registrar_aviso_funciona_sin_supervisor(): void
     {
-        Mail::fake();
         $this->admin();
         $doc = $this->docPorVencer(null);
 
-        Volt::test('documentos.tabla')->call('avisar', $doc->id);
+        Volt::test('documentos.tabla')->call('registrarAviso', $doc->id)->assertHasNoErrors();
 
-        Mail::assertNothingSent();
-        $this->assertSame(0, \App\Models\AvisoDocumento::count());
+        $this->assertSame(1, AvisoDocumento::count());
+    }
+
+    public function test_mensaje_whatsapp_incluye_los_datos(): void
+    {
+        $this->admin();
+        $doc = $this->docPorVencer(null)->fresh(['empleado', 'tipoDocumento']);
+
+        $msg = $doc->mensajeWhatsapp();
+        $this->assertStringContainsString('SCTR Salud', $msg);
+        $this->assertStringContainsString('Ana', $msg);
+        $this->assertStringContainsString('wa.me/?text=', $doc->urlWhatsapp());
     }
 }
