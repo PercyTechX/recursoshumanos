@@ -100,6 +100,29 @@ class TicketsTest extends TestCase
         $this->assertNull($t->sucursal_id);
     }
 
+    public function test_sede_ignora_sucursal_residual(): void
+    {
+        // Reproduce el bug: tipo=sede pero quedó un sucursal_id viejo → debe guardar igual.
+        $this->actor('Supervisor');
+        $cliente = $this->cliente();
+        $sede = Sede::create(['nombre' => 'Oficina', 'tipo' => 'oficina']);
+
+        Volt::test('tickets.tabla')
+            ->call('nuevo')
+            ->set('ticket_atencion', 'TA-SEDE')
+            ->set('cliente_id', $cliente->id)
+            ->set('ubicacion_tipo', 'sede')
+            ->set('sucursal_id', 999999) // residual inexistente (campo oculto)
+            ->set('sede_id', $sede->id)
+            ->call('guardar')
+            ->assertHasNoErrors();
+
+        $t = Ticket::where('ticket_atencion', 'TA-SEDE')->first();
+        $this->assertNotNull($t);
+        $this->assertSame($sede->id, $t->sede_id);
+        $this->assertNull($t->sucursal_id);
+    }
+
     public function test_cerrar_ticket(): void
     {
         $user = $this->actor('Supervisor');

@@ -44,8 +44,10 @@ new class extends Component {
             'ticket_atencion' => ['required', 'string', 'max:60', Rule::unique('tickets', 'ticket_atencion')->ignore($this->editandoId)],
             'cliente_id' => ['required', 'exists:clientes,id'],
             'ubicacion_tipo' => ['required', 'in:sucursal,sede'],
-            'sucursal_id' => ['nullable', 'required_if:ubicacion_tipo,sucursal', 'exists:sucursales,id'],
-            'sede_id' => ['nullable', 'required_if:ubicacion_tipo,sede', 'exists:sedes,id'],
+            // exclude_unless: si no aplica el tipo, el campo se ignora por completo
+            // (no se valida su exists ni se exige) — evita errores "fantasma" ocultos.
+            'sucursal_id' => ['exclude_unless:ubicacion_tipo,sucursal', 'required', 'exists:sucursales,id'],
+            'sede_id' => ['exclude_unless:ubicacion_tipo,sede', 'required', 'exists:sedes,id'],
             'descripcion' => ['nullable', 'string', 'max:500'],
         ];
     }
@@ -53,8 +55,8 @@ new class extends Component {
     protected function messages(): array
     {
         return [
-            'sucursal_id.required_if' => 'Elige la sucursal.',
-            'sede_id.required_if' => 'Elige la sede.',
+            'sucursal_id.required' => 'Elige la sucursal.',
+            'sede_id.required' => 'Elige la sede.',
         ];
     }
 
@@ -88,8 +90,8 @@ new class extends Component {
         $payload = [
             'ticket_atencion' => $datos['ticket_atencion'],
             'cliente_id' => $datos['cliente_id'],
-            'sucursal_id' => $datos['ubicacion_tipo'] === 'sucursal' ? $datos['sucursal_id'] : null,
-            'sede_id' => $datos['ubicacion_tipo'] === 'sede' ? $datos['sede_id'] : null,
+            'sucursal_id' => $this->ubicacion_tipo === 'sucursal' ? $this->sucursal_id : null,
+            'sede_id' => $this->ubicacion_tipo === 'sede' ? $this->sede_id : null,
             'descripcion' => $datos['descripcion'] ?: null,
         ];
         if (! $this->editandoId) {
