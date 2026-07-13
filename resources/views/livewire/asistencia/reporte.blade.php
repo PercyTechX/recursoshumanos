@@ -9,6 +9,8 @@ use Livewire\Volt\Component;
 
 new class extends Component {
     #[Url]
+    public string $tipo = 'general'; // general | detallado
+    #[Url]
     public string $desde = '';
     #[Url]
     public string $hasta = '';
@@ -90,6 +92,81 @@ new class extends Component {
         return ['filas' => $filas, 'detalle' => $detalle];
     }
 
+    /** Línea de tiempo del empleado (ingreso, tickets, salida) agrupada por turno. */
+    private function timeline(int $empleadoId): array
+    {
+        [$ini, $fin] = $this->rango();
+
+        $eventos = collect();
+
+        // Marcaciones (ingreso/salida)
+        foreach (Marcacion::where('empleado_id', $empleadoId)->whereBetween('fecha_hora', [$ini, $fin])->get() as $m) {
+            $eventos->push([
+                'hora' => $m->fecha_hora, 'orden' => $m->fecha_hora->timestamp,
+                'clase' => 'marcacion', 'tipo' => $m->tipo,
+                'titulo' => $m->tipo === 'ingreso' ? 'Ingreso' : 'Salida',
+                'ubicacion' => null, 'dentro' => null,
+                'lat' => $m->latitud, 'lng' => $m->longitud,
+            ]);
+        }
+
+        // Avances de tickets
+        $avances = TicketAvance::whereBetween('fecha_hora', [$ini, $fin])
+            ->whereHas('ticketTecnico', fn ($q) => $q->where('empleado_id', $empleadoId))
+            ->with(['ticketTecnico.ticket.sucursal', 'ticketTecnico.ticket.sede'])->get();
+        foreach ($avances as $a) {
+            $ticket = $a->ticketTecnico?->ticket;
+            $estado = match ($a->estado) {
+                'iniciado' => 'Iniciado', 'en_ejecucion' => 'En ejecución',
+                'terminado' => 'Terminado', 'abortado' => 'Abortado', default => $a->estado,
+            };
+            $eventos->push([
+                'hora' => $a->fecha_hora, 'orden' => $a->fecha_hora->timestamp + 0.5,
+                'clase' => 'ticket', 'tipo' => $a->estado,
+                'titulo' => 'Ticket '.($ticket?->ticket_atencion ?? '').' · '.$estado,
+                'ubicacion' => $ticket?->ubicacion_nombre,
+                'dentro' => $a->dentro_geocerca,
+                'lat' => $a->latitud, 'lng' => $a->longitud,
+            ]);
+        }
+
+        $eventos = $eventos->sortBy('orden')->values();
+
+        // Agrupar por turno (ingreso→salida)
+        $turnos = [];
+        $actual = null;
+        foreach ($eventos as $ev) {
+            if ($ev['clase'] === 'marcacion' && $ev['tipo'] === 'ingreso') {
+                if ($actual) {
+                    $turnos[] = $actual;
+                }
+                $actual = ['inicio' => $ev['hora'], 'fin' => null, 'eventos' => [$ev]];
+            } elseif ($ev['clase'] === 'marcacion' && $ev['tipo'] === 'salida') {
+                if (! $actual) {
+                    $actual = ['inicio' => null, 'fin' => null, 'eventos' => []];
+                }
+                $actual['fin'] = $ev['hora'];
+                $actual['eventos'][] = $ev;
+                $turnos[] = $actual;
+                $actual = null;
+            } else {
+                if (! $actual) {
+                    $actual = ['inicio' => null, 'fin' => null, 'eventos' => []];
+                }
+                $actual['eventos'][] = $ev;
+            }
+        }
+        if ($actual) {
+            $turnos[] = $actual;
+        }
+
+        foreach ($turnos as &$t) {
+            $t['minutos'] = ($t['inicio'] && $t['fin']) ? $t['inicio']->diffInMinutes($t['fin']) : 0;
+        }
+
+        return $turnos;
+    }
+
     public function exportar()
     {
         $datos = $this->calcular();
@@ -119,6 +196,7 @@ new class extends Component {
         return [
             'filas' => $r['filas'],
             'detalle' => $r['detalle'],
+            'turnos' => ($this->tipo === 'detallado' && $this->empleado_id) ? $this->timeline($this->empleado_id) : [],
             'empleados' => Empleado::where('situacion', 'activo')->orderBy('apellidos')->get(),
         ];
     }
@@ -131,6 +209,13 @@ new class extends Component {
 <div>
     {{-- Filtros --}}
     <div class="flex flex-wrap items-end gap-3 mb-5 bg-surface border border-line rounded-xl p-4">
+        <div>
+            <label class="block text-xs text-muted mb-1">Tipo de reporte</label>
+            <div class="inline-flex rounded-lg border border-line overflow-hidden">
+                <button wire:click="$set('tipo', 'general')" class="px-3 py-2 text-sm font-medium {{ $tipo === 'general' ? 'bg-primary text-white' : 'bg-surface text-muted hover:bg-canvas' }}">General</button>
+                <button wire:click="$set('tipo', 'detallado')" class="px-3 py-2 text-sm font-medium {{ $tipo === 'detallado' ? 'bg-primary text-white' : 'bg-surface text-muted hover:bg-canvas' }}">Detallado</button>
+            </div>
+        </div>
         <div>
             <label class="block text-xs text-muted mb-1">Desde</label>
             <input type="date" wire:model.live="desde" class="rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
@@ -154,6 +239,7 @@ new class extends Component {
         </button>
     </div>
 
+    @if ($tipo === 'general')
     {{-- Resumen por empleado --}}
     <div class="overflow-x-auto rounded-xl border border-line bg-surface mb-5">
         <div class="px-4 py-2 text-xs uppercase tracking-wide text-faint border-b border-line">Resumen del {{ \Illuminate\Support\Carbon::parse($desde)->format('d/m/Y') }} al {{ \Illuminate\Support\Carbon::parse($hasta)->format('d/m/Y') }}</div>
@@ -204,6 +290,59 @@ new class extends Component {
                 </tbody>
             </table>
         </div>
+    @endif
+    @endif
+
+    {{-- DETALLADO: línea de tiempo (trazabilidad) --}}
+    @if ($tipo === 'detallado')
+        @if (! $empleado_id)
+            <div class="bg-surface border border-line rounded-xl p-8 text-center text-muted">Elige un <strong>empleado</strong> para ver su trazabilidad del día.</div>
+        @elseif (! count($turnos))
+            <div class="bg-surface border border-line rounded-xl p-8 text-center text-faint">Sin actividad en el rango elegido.</div>
+        @else
+            <div class="space-y-4">
+                @foreach ($turnos as $i => $t)
+                    <div class="bg-surface border border-line rounded-xl overflow-hidden">
+                        <div class="flex items-center justify-between px-4 py-2 bg-canvas border-b border-line">
+                            <span class="text-sm font-semibold text-navy">Turno {{ $i + 1 }}
+                                @if ($t['inicio']) · {{ $t['inicio']->format('d/m/Y H:i') }} @endif
+                                @if ($t['fin']) → {{ $t['fin']->format('H:i') }} @elseif ($t['inicio']) → (en curso) @endif
+                            </span>
+                            @if ($t['minutos'] > 0)<span class="text-xs text-muted tabular-nums">{{ $horas($t['minutos']) }}</span>@endif
+                        </div>
+                        <ol class="relative">
+                            @foreach ($t['eventos'] as $ev)
+                                <li class="flex gap-3 px-4 py-3 border-b border-line last:border-0">
+                                    <div class="w-14 shrink-0 text-xs text-faint tabular-nums pt-0.5">{{ $ev['hora']->format('H:i') }}</div>
+                                    <div class="shrink-0 pt-1">
+                                        @php
+                                            $dot = match (true) {
+                                                $ev['clase'] === 'marcacion' && $ev['tipo'] === 'ingreso' => 'bg-success',
+                                                $ev['clase'] === 'marcacion' && $ev['tipo'] === 'salida' => 'bg-warning',
+                                                $ev['tipo'] === 'terminado' => 'bg-success',
+                                                $ev['tipo'] === 'abortado' => 'bg-danger',
+                                                default => 'bg-primary',
+                                            };
+                                        @endphp
+                                        <span class="block w-2.5 h-2.5 rounded-full {{ $dot }}"></span>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <div class="text-sm text-ink">{{ $ev['titulo'] }}</div>
+                                        <div class="text-xs text-faint flex flex-wrap gap-x-3">
+                                            @if ($ev['ubicacion'])<span><x-icon name="map-pin" class="w-3 h-3 inline" /> {{ $ev['ubicacion'] }}</span>@endif
+                                            @if (! is_null($ev['dentro']))
+                                                <span class="{{ $ev['dentro'] ? 'text-success' : 'text-danger' }}">{{ $ev['dentro'] ? 'dentro de zona' : 'fuera de zona' }}</span>
+                                            @endif
+                                            @if ($ev['lat'])<span class="tabular-nums">{{ $ev['lat'] }}, {{ $ev['lng'] }}</span>@endif
+                                        </div>
+                                    </div>
+                                </li>
+                            @endforeach
+                        </ol>
+                    </div>
+                @endforeach
+            </div>
+        @endif
     @endif
 
     <p class="text-xs text-faint mt-3">Las horas se calculan emparejando cada ingreso con su salida (soporta jornadas que cruzan la medianoche). Las <strong>tardanzas</strong> requieren definir horarios/turnos (pendiente).</p>

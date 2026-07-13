@@ -2,8 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\Cliente;
 use App\Models\Empleado;
 use App\Models\Marcacion;
+use App\Models\Sucursal;
+use App\Models\Ticket;
+use App\Models\TicketAvance;
+use App\Models\TicketTecnico;
 use App\Models\User;
 use Database\Seeders\CatalogoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -61,6 +66,30 @@ class ReporteAsistenciaTest extends TestCase
         Volt::test('asistencia.reporte')
             ->set('desde', '2026-07-01')->set('hasta', '2026-07-31')
             ->assertSee('4h 0m');
+    }
+
+    public function test_detallado_muestra_trazabilidad_con_tickets(): void
+    {
+        $this->supervisor();
+        $e = Empleado::create(['numero_documento' => '40404040', 'nombres' => 'Luis', 'apellidos' => 'Campo']);
+        $this->marcar($e->id, 'ingreso', '2026-07-05 08:00:00');
+
+        $cliente = Cliente::create(['razon_social' => 'C']);
+        $suc = Sucursal::create(['cliente_id' => $cliente->id, 'nombre' => 'Local', 'latitud' => -12, 'longitud' => -77, 'radio_metros' => 100]);
+        $ticket = Ticket::create(['ticket_atencion' => 'TA-77', 'cliente_id' => $cliente->id, 'sucursal_id' => $suc->id]);
+        $tt = TicketTecnico::create(['ticket_id' => $ticket->id, 'empleado_id' => $e->id, 'estado_trabajo' => 'en_ejecucion']);
+        TicketAvance::create(['ticket_tecnico_id' => $tt->id, 'estado' => 'en_ejecucion', 'fecha_hora' => '2026-07-05 09:30:00', 'dentro_geocerca' => true, 'latitud' => -12, 'longitud' => -77]);
+
+        $this->marcar($e->id, 'salida', '2026-07-05 17:00:00');
+
+        Volt::test('asistencia.reporte')
+            ->set('tipo', 'detallado')
+            ->set('empleado_id', $e->id)
+            ->set('desde', '2026-07-01')->set('hasta', '2026-07-31')
+            ->assertSee('Turno 1')
+            ->assertSee('TA-77')
+            ->assertSee('En ejecución')
+            ->assertSee('dentro de zona');
     }
 
     public function test_exporta_csv(): void
