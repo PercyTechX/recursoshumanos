@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Asignacion;
+use App\Models\Ausencia;
 use App\Models\Derechohabiente;
 use App\Models\Documento;
 use App\Models\Empleado;
@@ -123,6 +124,7 @@ new class extends Component {
     public string $mov_tipo = 'apertura';
     public string $mov_dias = '';
     public string $mov_fecha = '';
+    public string $mov_fecha_corte = '';
     public string $mov_observacion = '';
 
     public function puedeGestionarVacaciones(): bool
@@ -132,7 +134,7 @@ new class extends Component {
 
     public function abrirMov(): void
     {
-        $this->reset(['mov_tipo', 'mov_dias', 'mov_fecha', 'mov_observacion']);
+        $this->reset(['mov_tipo', 'mov_dias', 'mov_fecha', 'mov_fecha_corte', 'mov_observacion']);
         $this->mov_tipo = 'apertura';
         $this->mov_fecha = now()->toDateString();
         $this->resetErrorBag();
@@ -147,12 +149,15 @@ new class extends Component {
             'mov_tipo' => ['required', 'in:apertura,devengado,ajuste'],
             'mov_dias' => ['required', 'numeric'],
             'mov_fecha' => ['required', 'date'],
+            'mov_fecha_corte' => ['nullable', 'date'],
             'mov_observacion' => ['nullable', 'string', 'max:200'],
-        ], [], ['mov_dias' => 'días']);
+        ], [], ['mov_dias' => 'días', 'mov_fecha_corte' => 'fecha de corte']);
 
         MovimientoVacaciones::create([
             'empleado_id' => $this->empleadoId,
             'fecha' => $datos['mov_fecha'],
+            // La fecha de corte (devengo) solo aplica a la apertura.
+            'fecha_corte' => $datos['mov_tipo'] === 'apertura' ? ($datos['mov_fecha_corte'] ?: null) : null,
             'tipo' => $datos['mov_tipo'],
             'dias' => $datos['mov_dias'],
             'observacion' => $datos['mov_observacion'] ?: null,
@@ -161,6 +166,13 @@ new class extends Component {
 
         $this->mostrarMov = false;
         session()->flash('ok', 'Movimiento de vacaciones registrado.');
+    }
+
+    public function eliminarMov(int $id): void
+    {
+        abort_unless($this->puedeGestionarVacaciones(), 403);
+        MovimientoVacaciones::where('empleado_id', $this->empleadoId)->findOrFail($id)->delete();
+        session()->flash('ok', 'Movimiento eliminado.');
     }
 
     private function guardarFirma(string $dataUrl, string $carpeta): ?string
@@ -234,7 +246,11 @@ new class extends Component {
                 ->orderByDesc('fecha')->orderByDesc('id')->get(),
             'solicitudesVac' => SolicitudVacaciones::where('empleado_id', $this->empleadoId)
                 ->orderByDesc('fecha_inicio')->get(),
-            'saldoVac' => (float) MovimientoVacaciones::where('empleado_id', $this->empleadoId)->sum('dias'),
+            'saldoVac' => $empleado->saldo_vacaciones,
+            'devengadoVac' => $empleado->devengadoVacaciones(),
+            'fechaCorteVac' => $empleado->fechaCorteVacaciones(),
+            'ausencias' => Ausencia::where('empleado_id', $this->empleadoId)
+                ->orderByDesc('fecha_inicio')->get(),
         ];
     }
 }; ?>
@@ -275,6 +291,7 @@ new class extends Component {
         <button @click="tab='activos'" :class="tab==='activos' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Activos ({{ $asignaciones->whereNull('fecha_devolucion')->count() }})</button>
         <button @click="tab='epp'" :class="tab==='epp' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">EPP ({{ $entregasEpp->count() }})</button>
         <button @click="tab='vacaciones'" :class="tab==='vacaciones' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Vacaciones</button>
+        <button @click="tab='ausencias'" :class="tab==='ausencias' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Ausencias ({{ $ausencias->count() }})</button>
         <button @click="tab='hojas'" :class="tab==='hojas' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Hojas de ruta ({{ $hojasRuta->count() }})</button>
     </div>
 
@@ -400,7 +417,7 @@ new class extends Component {
     {{-- FAMILIA (derechohabientes) --}}
     <section x-show="tab==='familia'" x-cloak>
         <div class="flex justify-end mb-3">
-            <button wire:click="abrirDh" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">+ Agregar familiar</button>
+            <button wire:click="abrirDh" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2"><x-icon name="plus" class="w-4 h-4" /> Agregar familiar</button>
         </div>
         <div class="bg-surface border border-line rounded-xl overflow-x-auto">
             <table class="w-full text-sm min-w-[640px]">
@@ -427,8 +444,15 @@ new class extends Component {
                                 @else <span class="text-faint">—</span> @endif
                             </td>
                             <td class="px-4 py-3 text-right whitespace-nowrap">
-                                <button wire:click="abrirDh({{ $dh->id }})" class="text-primary hover:underline text-sm font-medium">Editar</button>
-                                <button wire:click="eliminarDh({{ $dh->id }})" wire:confirm="¿Eliminar a {{ $dh->nombres }}?" class="ml-3 text-danger hover:underline text-sm font-medium">Eliminar</button>
+                                <div class="inline-flex items-center gap-1 justify-end w-full">
+                                    @php $btnDh = 'inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-canvas transition-colors'; @endphp
+                                    <button wire:click="abrirDh({{ $dh->id }})" class="{{ $btnDh }} text-primary" title="Editar">
+                                        <x-icon name="pencil" />
+                                    </button>
+                                    <button wire:click="eliminarDh({{ $dh->id }})" wire:confirm="¿Eliminar a {{ $dh->nombres }}?" class="{{ $btnDh }} text-danger" title="Eliminar">
+                                        <x-icon name="trash" />
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     @empty
@@ -476,7 +500,7 @@ new class extends Component {
     {{-- EPP --}}
     <section x-show="tab==='epp'" x-cloak>
         <div class="flex justify-end mb-3">
-            <button wire:click="abrirEpp" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">+ Entregar EPP</button>
+            <button wire:click="abrirEpp" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2"><x-icon name="plus" class="w-4 h-4" /> Entregar EPP</button>
         </div>
         <div class="bg-surface border border-line rounded-xl overflow-x-auto">
             <table class="w-full text-sm min-w-[520px]">
@@ -518,9 +542,12 @@ new class extends Component {
                 <div class="text-2xl font-bold tabular-nums {{ $saldoVac < 0 ? 'text-danger' : 'text-success' }}">
                     {{ number_format($saldoVac, 1) }} <span class="text-sm font-medium text-muted">días</span>
                 </div>
+                @if ($devengadoVac > 0)
+                    <div class="text-xs text-faint mt-0.5">Incluye <span class="text-success font-semibold">+{{ number_format($devengadoVac, 1) }}</span> devengado desde {{ $fechaCorteVac->format('d/m/Y') }} (2.5/mes)</div>
+                @endif
             </div>
             @if ($this->puedeGestionarVacaciones())
-                <button wire:click="abrirMov" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">+ Registrar movimiento</button>
+                <button wire:click="abrirMov" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2"><x-icon name="plus" class="w-4 h-4" /> Registrar movimiento</button>
             @endif
         </div>
 
@@ -569,24 +596,77 @@ new class extends Component {
                         <th class="px-4 py-3">Tipo</th>
                         <th class="px-4 py-3 text-right">Días</th>
                         <th class="px-4 py-3">Detalle</th>
+                        <th class="px-4 py-3"></th>
                     </tr>
                 </thead>
                 <tbody>
+                    @if ($devengadoVac > 0)
+                        <tr class="border-b border-line last:border-0 bg-success-tint/20">
+                            <td class="px-4 py-3 text-muted tabular-nums">{{ now()->format('d/m/Y') }}</td>
+                            <td class="px-4 py-3 text-ink">Devengado a la fecha <span class="text-faint text-xs">(calculado)</span></td>
+                            <td class="px-4 py-3 text-right tabular-nums font-semibold text-success">+{{ number_format($devengadoVac, 1) }}</td>
+                            <td class="px-4 py-3 text-muted">Desde el corte {{ $fechaCorteVac->format('d/m/Y') }} · 2.5/mes prorrateado</td>
+                            <td></td>
+                        </tr>
+                    @endif
                     @forelse ($movimientosVac as $m)
                         <tr class="border-b border-line last:border-0">
                             <td class="px-4 py-3 text-muted tabular-nums">{{ $m->fecha->format('d/m/Y') }}</td>
-                            <td class="px-4 py-3 text-ink">{{ $m->tipo_label }}</td>
+                            <td class="px-4 py-3 text-ink">{{ $m->tipo_label }}@if ($m->tipo === 'apertura' && $m->fecha_corte)<span class="text-faint text-xs"> · corte {{ $m->fecha_corte->format('d/m/Y') }}</span>@endif</td>
                             <td class="px-4 py-3 text-right tabular-nums font-semibold {{ $m->dias < 0 ? 'text-danger' : 'text-success' }}">
                                 {{ $m->dias > 0 ? '+' : '' }}{{ number_format((float) $m->dias, 1) }}
                             </td>
                             <td class="px-4 py-3 text-muted">{{ $m->observacion ?? '—' }}</td>
+                            <td class="px-4 py-3 text-right">
+                                @if ($this->puedeGestionarVacaciones() && in_array($m->tipo, ['apertura', 'devengado', 'ajuste'], true))
+                                    <button wire:click="eliminarMov({{ $m->id }})" wire:confirm="¿Eliminar este movimiento?" class="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-canvas text-danger" title="Eliminar">
+                                        <x-icon name="trash" />
+                                    </button>
+                                @endif
+                            </td>
                         </tr>
                     @empty
-                        <tr><td colspan="4" class="px-4 py-6 text-center text-faint">Sin movimientos. Registra la apertura del saldo.</td></tr>
+                        <tr><td colspan="5" class="px-4 py-6 text-center text-faint">Sin movimientos. Registra la apertura del saldo.</td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
+    </section>
+
+    {{-- AUSENCIAS --}}
+    <section x-show="tab==='ausencias'" x-cloak class="bg-surface border border-line rounded-xl overflow-x-auto">
+        <table class="w-full text-sm min-w-[560px]">
+            <thead>
+                <tr class="text-left text-xs uppercase tracking-wide text-faint bg-canvas border-b border-line">
+                    <th class="px-4 py-3">Tipo</th>
+                    <th class="px-4 py-3">Periodo</th>
+                    <th class="px-4 py-3 text-center">Días</th>
+                    <th class="px-4 py-3">Goce</th>
+                    <th class="px-4 py-3">Archivo</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse ($ausencias as $a)
+                    <tr class="border-b border-line last:border-0">
+                        <td class="px-4 py-3 text-ink">{{ $a->tipo_label }}@if ($a->documento_ref)<div class="text-faint text-xs">{{ $a->documento_ref }}</div>@endif</td>
+                        <td class="px-4 py-3 text-muted tabular-nums">{{ $a->fecha_inicio->format('d/m/Y') }} → {{ $a->fecha_fin->format('d/m/Y') }}</td>
+                        <td class="px-4 py-3 text-center tabular-nums">{{ $a->dias }}</td>
+                        <td class="px-4 py-3">
+                            @if ($a->con_goce)
+                                <span class="text-success text-xs font-semibold">Con goce</span>
+                            @else <span class="text-muted text-xs font-semibold">Sin goce</span> @endif
+                        </td>
+                        <td class="px-4 py-3">
+                            @if ($a->archivo_path)
+                                <a href="{{ Storage::url($a->archivo_path) }}" target="_blank" class="text-primary hover:underline">Ver</a>
+                            @else <span class="text-faint">—</span> @endif
+                        </td>
+                    </tr>
+                @empty
+                    <tr><td colspan="5" class="px-4 py-8 text-center text-faint">Sin ausencias registradas.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
     </section>
 
     {{-- HOJAS DE RUTA --}}
@@ -696,7 +776,7 @@ new class extends Component {
                 <form wire:submit="guardarMov" class="px-6 py-5 space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-muted mb-1">Tipo *</label>
-                        <select wire:model="mov_tipo" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                        <select wire:model.live="mov_tipo" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
                             <option value="apertura">Apertura (saldo inicial a la fecha de corte)</option>
                             <option value="devengado">Devengado (acumulado por tiempo trabajado)</option>
                             <option value="ajuste">Ajuste (corrección + o −)</option>
@@ -709,11 +789,19 @@ new class extends Component {
                             @error('mov_dias') <span class="text-danger text-xs">{{ $message }}</span> @enderror
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-muted mb-1">Fecha *</label>
+                            <label class="block text-sm font-medium text-muted mb-1">Fecha (registro) *</label>
                             <input type="date" wire:model="mov_fecha" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
                             @error('mov_fecha') <span class="text-danger text-xs">{{ $message }}</span> @enderror
                         </div>
                     </div>
+                    @if ($mov_tipo === 'apertura')
+                        <div class="rounded-lg bg-primary-tint/50 border border-line p-3">
+                            <label class="block text-sm font-medium text-muted mb-1">Fecha de corte (opcional) — <span class="text-primary">devenga desde aquí</span></label>
+                            <input type="date" wire:model="mov_fecha_corte" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                            <p class="text-xs text-faint mt-1">Si la llenas, el saldo suma <strong>2.5 días/mes</strong> (prorrateado) desde esa fecha hasta hoy. Si la dejas vacía, el saldo queda fijo.</p>
+                            @error('mov_fecha_corte') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                        </div>
+                    @endif
                     <p class="text-xs text-faint">Para descontar días usa números negativos (ej. un ajuste de −2). Los días gozados se generan solos al aprobar una solicitud.</p>
                     <div>
                         <label class="block text-sm font-medium text-muted mb-1">Observación</label>

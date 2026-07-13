@@ -28,9 +28,14 @@ new class extends Component {
     public ?int $rechazandoId = null;
     public string $comentario_decision = '';
 
+    // Retorno anticipado (interrupción)
+    public bool $mostrarRetorno = false;
+    public ?int $retornandoId = null;
+    public string $fecha_fin_real = '';
+
     public function puedeDecidir(): bool
     {
-        return auth()->user()?->hasAnyRole(['RRHH', 'Gerencia', 'Supervisor']) ?? false;
+        return auth()->user()?->can('vacaciones.aprobar') ?? false;
     }
 
     public function nuevo(): void
@@ -42,6 +47,7 @@ new class extends Component {
 
     public function guardar(): void
     {
+        abort_unless(auth()->user()->can('vacaciones.crear'), 403);
         $datos = $this->validate([
             'empleado_id' => ['required', 'exists:empleados,id'],
             'fecha_inicio' => ['required', 'date'],
@@ -116,8 +122,63 @@ new class extends Component {
         session()->flash('ok', 'Solicitud rechazada.');
     }
 
+    public function abrirRetorno(int $id): void
+    {
+        abort_unless($this->puedeDecidir(), 403);
+        $this->retornandoId = $id;
+        $this->fecha_fin_real = '';
+        $this->resetErrorBag();
+        $this->mostrarRetorno = true;
+    }
+
+    /** Registra que el trabajador volvió antes: reintegra al saldo los días no gozados. */
+    public function registrarRetorno(): void
+    {
+        abort_unless($this->puedeDecidir(), 403);
+        $s = SolicitudVacaciones::findOrFail($this->retornandoId);
+
+        $this->validate([
+            'fecha_fin_real' => [
+                'required', 'date',
+                'after_or_equal:'.$s->fecha_inicio->toDateString(),
+                'before:'.$s->fecha_fin->toDateString(),
+            ],
+        ], [
+            'fecha_fin_real.after_or_equal' => 'El último día real no puede ser antes del inicio de las vacaciones.',
+            'fecha_fin_real.before' => 'Si volvió el último día o después, no hubo interrupción.',
+        ], ['fecha_fin_real' => 'último día real']);
+
+        if ($s->estado !== SolicitudVacaciones::APROBADA || $s->interrumpida) {
+            return;
+        }
+
+        $diasReales = SolicitudVacaciones::calcularDias($s->fecha_inicio->toDateString(), $this->fecha_fin_real);
+        $reintegro = $s->dias - $diasReales;
+
+        $s->update([
+            'fecha_fin_real' => $this->fecha_fin_real,
+            'dias_reintegrados' => $reintegro,
+        ]);
+
+        if ($reintegro > 0) {
+            MovimientoVacaciones::create([
+                'empleado_id' => $s->empleado_id,
+                'fecha' => $this->fecha_fin_real,
+                'tipo' => MovimientoVacaciones::REINTEGRO,
+                'dias' => $reintegro,
+                'solicitud_id' => $s->id,
+                'observacion' => 'Retorno anticipado: gozó '.$diasReales.' de '.$s->dias.' días',
+                'created_by' => auth()->id(),
+            ]);
+        }
+
+        $this->mostrarRetorno = false;
+        session()->flash('ok', "Retorno registrado. Se reintegraron {$reintegro} día(s) al saldo.");
+    }
+
     public function cancelar(int $id): void
     {
+        abort_unless(auth()->user()->can('vacaciones.eliminar'), 403);
         $s = SolicitudVacaciones::findOrFail($id);
         if ($s->estado === SolicitudVacaciones::PENDIENTE) {
             $s->update(['estado' => SolicitudVacaciones::CANCELADA]);
@@ -160,7 +221,7 @@ new class extends Component {
 
     <div class="flex flex-wrap items-center gap-2 mb-4">
         <div class="flex-1 min-w-[180px] flex items-center gap-2 rounded-lg border border-line bg-canvas px-3 py-2">
-            <span class="text-faint">🔎</span>
+            <x-icon name="search" class="w-4 h-4 text-faint shrink-0" />
             <input type="text" wire:model.live.debounce.400ms="buscar" placeholder="Buscar por empleado o documento…"
                    class="w-full bg-transparent border-0 p-0 text-sm text-ink placeholder:text-faint focus:ring-0">
         </div>
@@ -171,7 +232,9 @@ new class extends Component {
             <option value="rechazada">Rechazadas</option>
             <option value="cancelada">Canceladas</option>
         </select>
-        <button wire:click="nuevo" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">+ Nueva solicitud</button>
+        @can('vacaciones.crear')
+            <button wire:click="nuevo" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2"><x-icon name="plus" class="w-4 h-4" /> Nueva solicitud</button>
+        @endcan
     </div>
 
     <div class="overflow-x-auto rounded-xl border border-line bg-surface">
@@ -192,7 +255,12 @@ new class extends Component {
                             {{ $s->empleado?->apellidos }}, {{ $s->empleado?->nombres }}
                             @if ($s->motivo)<div class="text-faint text-xs">{{ $s->motivo }}</div>@endif
                         </td>
-                        <td class="px-4 py-3 text-muted tabular-nums">{{ $s->fecha_inicio->format('d/m/Y') }} → {{ $s->fecha_fin->format('d/m/Y') }}</td>
+                        <td class="px-4 py-3 text-muted tabular-nums">
+                            {{ $s->fecha_inicio->format('d/m/Y') }} → {{ $s->fecha_fin->format('d/m/Y') }}
+                            @if ($s->interrumpida)
+                                <div class="text-warning text-xs">Volvió el {{ $s->fecha_fin_real->format('d/m/Y') }} · +{{ number_format((float) $s->dias_reintegrados, 0) }} reintegrados</div>
+                            @endif
+                        </td>
                         <td class="px-4 py-3 text-center tabular-nums font-semibold text-ink">{{ $s->dias }}</td>
                         <td class="px-4 py-3">
                             @php
@@ -210,16 +278,33 @@ new class extends Component {
                                 <div class="text-faint text-xs mt-0.5">{{ $s->comentario_decision }}</div>
                             @endif
                         </td>
-                        <td class="px-4 py-3 text-right whitespace-nowrap">
-                            @if ($s->estado === 'pendiente')
-                                @if ($this->puedeDecidir())
-                                    <button wire:click="aprobar({{ $s->id }})" wire:confirm="¿Aprobar estas vacaciones? Se descontarán del saldo." class="text-success hover:underline text-sm font-medium">Aprobar</button>
-                                    <button wire:click="abrirRechazo({{ $s->id }})" class="ml-3 text-danger hover:underline text-sm font-medium">Rechazar</button>
+                        <td class="px-4 py-3">
+                            <div class="inline-flex items-center gap-1 justify-end w-full">
+                                @php $btn = 'inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-canvas transition-colors'; @endphp
+                                @if ($s->estado === 'pendiente')
+                                    @if ($this->puedeDecidir())
+                                        <button wire:click="aprobar({{ $s->id }})" wire:confirm="¿Aprobar estas vacaciones? Se descontarán del saldo." class="{{ $btn }} text-success" title="Aprobar">
+                                            <x-icon name="check" />
+                                        </button>
+                                        <button wire:click="abrirRechazo({{ $s->id }})" class="{{ $btn }} text-danger" title="Rechazar">
+                                            <x-icon name="x" />
+                                        </button>
+                                    @endif
+                                    @can('vacaciones.eliminar')
+                                        <button wire:click="cancelar({{ $s->id }})" wire:confirm="¿Cancelar esta solicitud?" class="{{ $btn }} text-muted" title="Cancelar solicitud">
+                                            <x-icon name="ban" />
+                                        </button>
+                                    @endcan
+                                @elseif ($s->estado === 'aprobada' && $this->puedeDecidir() && ! $s->interrumpida)
+                                    <button wire:click="abrirRetorno({{ $s->id }})" class="{{ $btn }} text-warning" title="Retorno anticipado (la empresa lo hizo volver antes)">
+                                        <x-icon name="return" />
+                                    </button>
+                                @elseif ($s->interrumpida)
+                                    <span class="text-warning text-xs font-medium">Interrumpida</span>
+                                @else
+                                    <span class="text-faint text-xs">{{ $s->decididaPor?->name ? 'por '.$s->decididaPor->name : '—' }}</span>
                                 @endif
-                                <button wire:click="cancelar({{ $s->id }})" wire:confirm="¿Cancelar esta solicitud?" class="ml-3 text-muted hover:underline text-sm font-medium">Cancelar</button>
-                            @else
-                                <span class="text-faint text-xs">{{ $s->decididaPor?->name ? 'por '.$s->decididaPor->name : '—' }}</span>
-                            @endif
+                            </div>
                         </td>
                     </tr>
                 @empty
@@ -282,6 +367,30 @@ new class extends Component {
                     <div class="flex justify-end gap-2 pt-1">
                         <button type="button" wire:click="$set('mostrarForm', false)" class="rounded-lg border border-line text-muted text-sm font-semibold px-4 py-2 hover:bg-canvas">Cancelar</button>
                         <button type="submit" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">Registrar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+
+    {{-- Modal retorno anticipado --}}
+    @if ($mostrarRetorno)
+        <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/40 p-4">
+            <div class="w-full max-w-md mt-16 rounded-2xl bg-surface shadow-xl">
+                <div class="flex items-center justify-between border-b border-line px-6 py-4">
+                    <h3 class="text-lg font-semibold text-navy">Retorno anticipado</h3>
+                    <button wire:click="$set('mostrarRetorno', false)" class="text-faint hover:text-ink text-xl leading-none">&times;</button>
+                </div>
+                <form wire:submit="registrarRetorno" class="px-6 py-5 space-y-4">
+                    <p class="text-sm text-muted">La empresa lo hizo volver antes de terminar sus vacaciones. Indica el <strong>último día que estuvo de vacaciones</strong>; los días no gozados vuelven a su saldo.</p>
+                    <div>
+                        <label class="block text-sm font-medium text-muted mb-1">Último día real de vacaciones *</label>
+                        <input type="date" wire:model="fecha_fin_real" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                        @error('fecha_fin_real') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" wire:click="$set('mostrarRetorno', false)" class="rounded-lg border border-line text-muted text-sm font-semibold px-4 py-2 hover:bg-canvas">Cancelar</button>
+                        <button type="submit" class="rounded-lg bg-warning hover:brightness-95 text-white text-sm font-semibold px-4 py-2">Registrar retorno</button>
                     </div>
                 </form>
             </div>

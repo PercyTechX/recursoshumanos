@@ -6,6 +6,7 @@ use App\Models\CategoriaActivo;
 use App\Models\TipoDocumento;
 use App\Models\TipoEpp;
 use Illuminate\Database\Seeder;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 /**
@@ -19,9 +20,37 @@ class CatalogoSeeder extends Seeder
 {
     public function run(): void
     {
-        // Roles del sistema
-        foreach (['RRHH', 'Supervisor', 'Gerencia', 'Empleado', 'Contador'] as $rol) {
+        // Roles del sistema (SuperAdmin ve y hace todo — vía Gate::before)
+        foreach (['SuperAdmin', 'RRHH', 'Supervisor', 'Gerencia', 'Empleado', 'Contador'] as $rol) {
             Role::firstOrCreate(['name' => $rol]);
+        }
+
+        // Permisos por módulo/acción (config/permisos.php)
+        foreach (config('permisos') as $mod => $data) {
+            foreach (array_keys($data['acciones']) as $accion) {
+                Permission::firstOrCreate(['name' => $mod.'.'.$accion]);
+            }
+        }
+
+        // Todos los permisos de una lista de módulos
+        $todos = fn (array $mods) => collect($mods)
+            ->flatMap(fn ($m) => collect(array_keys(config("permisos.$m.acciones")))->map(fn ($a) => $m.'.'.$a))
+            ->all();
+        $basicos = ['empleados', 'documentos', 'documentos_compartidos', 'activos', 'vacaciones', 'ausencias', 'clientes', 'tickets', 'asistencia'];
+
+        // Asignación por defecto (SOLO si el rol aún no tiene permisos — no pisa lo
+        // que se configure luego desde la pantalla de Roles y accesos).
+        $defaults = [
+            'RRHH' => array_merge($todos($basicos), $todos(['descuentos', 'usuarios'])),
+            'Gerencia' => array_merge($todos($basicos), $todos(['descuentos'])),
+            'Supervisor' => $todos($basicos),
+            'Contador' => $todos(['descuentos']),
+        ];
+        foreach ($defaults as $rol => $permisos) {
+            $role = Role::findByName($rol);
+            if ($role->permissions()->count() === 0) {
+                $role->givePermissionTo($permisos);
+            }
         }
 
         // Tipos de documento (con días de aviso previo al vencimiento).

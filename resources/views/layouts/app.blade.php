@@ -34,38 +34,88 @@
                 <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
                     <a href="{{ route('dashboard') }}" wire:navigate
                        class="{{ $itemBase }} {{ request()->routeIs('dashboard') ? $itemOn : $itemOff }}">
-                        <span>🏠</span> Tablero
+                        <x-icon name="home" class="w-5 h-5 shrink-0" /> Tablero
                     </a>
+                    @if (auth()->user()->empleado)
+                        <a href="{{ route('portal.index') }}" wire:navigate
+                           class="{{ $itemBase }} {{ request()->routeIs('portal.*') ? $itemOn : $itemOff }}">
+                            <x-icon name="user" class="w-5 h-5 shrink-0" /> Mi espacio
+                        </a>
+                    @endif
 
-                    @hasanyrole('RRHH|Gerencia|Supervisor')
+                    @can('empleados.ver')
                         <a href="{{ route('empleados.index') }}" wire:navigate
                            class="{{ $itemBase }} {{ request()->routeIs('empleados.*') ? $itemOn : $itemOff }}">
-                            <span>👥</span> Empleados
+                            <x-icon name="users" class="w-5 h-5 shrink-0" /> Empleados
                         </a>
+                    @endcan
+                    @can('documentos.ver')
                         <a href="{{ route('documentos.index') }}" wire:navigate
                            class="{{ $itemBase }} {{ request()->routeIs('documentos.index') || request()->routeIs('documentos.exportar') ? $itemOn : $itemOff }}">
-                            <span>📄</span> Documentos
+                            <x-icon name="document" class="w-5 h-5 shrink-0" /> Documentos
                         </a>
+                    @endcan
+                    @can('documentos_compartidos.ver')
                         <a href="{{ route('documentos-compartidos.index') }}" wire:navigate
                            class="{{ $itemBase }} {{ request()->routeIs('documentos-compartidos.*') ? $itemOn : $itemOff }}">
-                            <span>📋</span> Doc. compartidos
+                            <x-icon name="clipboard" class="w-5 h-5 shrink-0" /> Doc. compartidos
                         </a>
+                    @endcan
+                    @can('activos.ver')
                         <a href="{{ route('activos.index') }}" wire:navigate
                            class="{{ $itemBase }} {{ request()->routeIs('activos.*') ? $itemOn : $itemOff }}">
-                            <span>🔧</span> Activos
+                            <x-icon name="wrench" class="w-5 h-5 shrink-0" /> Activos
                         </a>
+                    @endcan
+                    @can('vacaciones.ver')
                         <a href="{{ route('vacaciones.index') }}" wire:navigate
                            class="{{ $itemBase }} {{ request()->routeIs('vacaciones.*') ? $itemOn : $itemOff }}">
-                            <span>🌴</span> Vacaciones
+                            <x-icon name="sun" class="w-5 h-5 shrink-0" /> Vacaciones
                         </a>
-                    @endhasanyrole
-
-                    @hasanyrole('Contador|RRHH|Gerencia')
+                    @endcan
+                    @can('ausencias.ver')
+                        <a href="{{ route('ausencias.index') }}" wire:navigate
+                           class="{{ $itemBase }} {{ request()->routeIs('ausencias.*') ? $itemOn : $itemOff }}">
+                            <x-icon name="health" class="w-5 h-5 shrink-0" /> Ausencias
+                        </a>
+                    @endcan
+                    @can('descuentos.ver')
                         <a href="{{ route('descuentos.index') }}" wire:navigate
                            class="{{ $itemBase }} {{ request()->routeIs('descuentos.*') ? $itemOn : $itemOff }}">
-                            <span>💸</span> Descuentos
+                            <x-icon name="cash" class="w-5 h-5 shrink-0" /> Descuentos
                         </a>
-                    @endhasanyrole
+                    @endcan
+
+                    @can('tickets.ver')
+                        <a href="{{ route('tickets.index') }}" wire:navigate
+                           class="{{ $itemBase }} {{ request()->routeIs('tickets.*') ? $itemOn : $itemOff }}">
+                            <x-icon name="ticket" class="w-5 h-5 shrink-0" /> Tickets
+                        </a>
+                    @endcan
+                    @can('asistencia.ver')
+                        <a href="{{ route('asistencia.index') }}" wire:navigate
+                           class="{{ $itemBase }} {{ request()->routeIs('asistencia.*') ? $itemOn : $itemOff }}">
+                            <x-icon name="clock" class="w-5 h-5 shrink-0" /> Control asistencia
+                        </a>
+                    @endcan
+                    @can('clientes.ver')
+                        <a href="{{ route('clientes.index') }}" wire:navigate
+                           class="{{ $itemBase }} {{ request()->routeIs('clientes.*') || request()->routeIs('sedes.*') ? $itemOn : $itemOff }}">
+                            <x-icon name="building" class="w-5 h-5 shrink-0" /> Clientes y sedes
+                        </a>
+                    @endcan
+                    @can('usuarios.ver')
+                        <a href="{{ route('usuarios.index') }}" wire:navigate
+                           class="{{ $itemBase }} {{ request()->routeIs('usuarios.*') ? $itemOn : $itemOff }}">
+                            <x-icon name="user-cog" class="w-5 h-5 shrink-0" /> Usuarios
+                        </a>
+                    @endcan
+                    @role('SuperAdmin')
+                        <a href="{{ route('roles.index') }}" wire:navigate
+                           class="{{ $itemBase }} {{ request()->routeIs('roles.*') ? $itemOn : $itemOff }}">
+                            <x-icon name="key" class="w-5 h-5 shrink-0" /> Roles y accesos
+                        </a>
+                    @endrole
                 </nav>
 
                 {{-- Usuario --}}

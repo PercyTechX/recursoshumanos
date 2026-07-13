@@ -10,14 +10,16 @@ class SolicitudVacaciones extends Model
     protected $table = 'solicitudes_vacaciones';
 
     protected $fillable = [
-        'empleado_id', 'fecha_inicio', 'fecha_fin', 'dias', 'motivo',
+        'empleado_id', 'fecha_inicio', 'fecha_fin', 'fecha_fin_real', 'dias', 'dias_reintegrados', 'motivo',
         'estado', 'decidida_por', 'fecha_decision', 'comentario_decision', 'created_by',
     ];
 
     protected $casts = [
         'fecha_inicio' => 'date',
         'fecha_fin' => 'date',
+        'fecha_fin_real' => 'date',
         'fecha_decision' => 'date',
+        'dias_reintegrados' => 'decimal:2',
     ];
 
     public const PENDIENTE = 'pendiente';
@@ -63,5 +65,11 @@ class SolicitudVacaciones extends Model
             self::CANCELADA => 'Cancelada',
             default => 'Pendiente',
         };
+    }
+
+    /** ¿Se interrumpió (retorno anticipado)? */
+    public function getInterrumpidaAttribute(): bool
+    {
+        return $this->fecha_fin_real !== null;
     }
 }

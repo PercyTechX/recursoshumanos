@@ -100,6 +100,16 @@ class Empleado extends Model
         return $this->belongsToMany(DocumentoCompartido::class, 'documento_compartido_empleado');
     }
 
+    public function ausencias(): HasMany
+    {
+        return $this->hasMany(Ausencia::class);
+    }
+
+    public function marcaciones(): HasMany
+    {
+        return $this->hasMany(Marcacion::class);
+    }
+
     public function solicitudesVacaciones(): HasMany
     {
         return $this->hasMany(SolicitudVacaciones::class);
@@ -110,10 +120,40 @@ class Empleado extends Model
         return $this->hasMany(MovimientoVacaciones::class);
     }
 
-    /** Saldo de vacaciones = suma del libro mayor (apertura + devengado - gozado ± ajuste). */
+    /** Fecha de corte del devengo: la más reciente entre las aperturas que la tengan. */
+    public function fechaCorteVacaciones(): ?\Illuminate\Support\Carbon
+    {
+        $corte = $this->movimientosVacaciones()
+            ->where('tipo', MovimientoVacaciones::APERTURA)
+            ->whereNotNull('fecha_corte')
+            ->max('fecha_corte');
+
+        return $corte ? \Illuminate\Support\Carbon::parse($corte) : null;
+    }
+
+    /**
+     * Días devengados (calculados al vuelo) desde la fecha de corte hasta $hasta,
+     * a razón de 2.5/mes prorrateado por días (mes = 30 días). 0 si no hay corte.
+     */
+    public function devengadoVacaciones(?\Illuminate\Support\Carbon $hasta = null): float
+    {
+        $corte = $this->fechaCorteVacaciones();
+        if (! $corte) {
+            return 0.0;
+        }
+        $hasta = ($hasta ?? now())->startOfDay();
+        $dias = $corte->copy()->startOfDay()->diffInDays($hasta, false);
+        if ($dias <= 0) {
+            return 0.0;
+        }
+
+        return round($dias * MovimientoVacaciones::DEVENGO_MENSUAL / 30, 2);
+    }
+
+    /** Saldo de vacaciones = libro mayor (apertura + gozado ± ajuste) + devengado a la fecha. */
     public function getSaldoVacacionesAttribute(): float
     {
-        return (float) $this->movimientosVacaciones()->sum('dias');
+        return round((float) $this->movimientosVacaciones()->sum('dias') + $this->devengadoVacaciones(), 2);
     }
 
     // ---- Accessors ----

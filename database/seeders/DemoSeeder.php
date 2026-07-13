@@ -4,6 +4,10 @@ namespace Database\Seeders;
 
 use App\Models\Activo;
 use App\Models\Area;
+use App\Models\Ausencia;
+use App\Models\Cliente;
+use App\Models\Sucursal;
+use App\Models\Ticket;
 use App\Models\Cargo;
 use App\Models\CategoriaActivo;
 use App\Models\Derechohabiente;
@@ -12,7 +16,9 @@ use App\Models\DocumentoCompartido;
 use App\Models\Empleado;
 use App\Models\Sede;
 use App\Models\TipoDocumento;
+use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 /**
  * Datos de PRUEBA (desechables).
@@ -77,6 +83,19 @@ class DemoSeeder extends Seeder
                     'tiene_seguro' => (bool) rand(0, 1),
                 ],
             );
+        }
+
+        // Organigrama de ejemplo (supervisores) — habilita el aviso al supervisor
+        $ids = Empleado::pluck('id', 'numero_documento');
+        $jefeOperaciones = $ids['34567890'] ?? null; // Carlos (Supervisor)
+        $gerente = $ids['56789012'] ?? null;          // Luis (Gerente)
+        if ($jefeOperaciones) {
+            Empleado::whereIn('numero_documento', ['12345678', '67890123', '78901234', '89012345'])
+                ->update(['supervisor_id' => $jefeOperaciones]);
+        }
+        if ($gerente) {
+            Empleado::whereIn('numero_documento', ['34567890', '23456789', '45678901'])
+                ->update(['supervisor_id' => $gerente]);
         }
 
         // Derechohabientes de ejemplo (familia de Juan Carlos Pérez)
@@ -148,6 +167,58 @@ class DemoSeeder extends Seeder
                 ]);
                 $dc->empleados()->sync($ampara->all());
             }
+        }
+
+        // Usuario-trabajador de ejemplo (para probar el portal del trabajador)
+        $juanId = $ids['12345678'] ?? null;
+        if ($juanId) {
+            $tecnico = User::firstOrCreate(
+                ['email' => 'tecnico@empresa.test'],
+                ['name' => 'Juan Carlos Pérez', 'password' => Hash::make('password')],
+            );
+            $tecnico->syncRoles(['Empleado']);
+            Empleado::whereKey($juanId)->update(['user_id' => $tecnico->id]);
+        }
+
+        // Ausencia de ejemplo (descanso médico)
+        $juanId = $ids['12345678'] ?? null;
+        if ($juanId && Ausencia::count() === 0) {
+            Ausencia::create([
+                'empleado_id' => $juanId, 'tipo' => 'descanso_medico', 'con_goce' => true,
+                'fecha_inicio' => now()->subDays(8)->toDateString(), 'fecha_fin' => now()->subDays(4)->toDateString(),
+                'dias' => 5, 'documento_ref' => 'CITT N° 000123', 'motivo' => 'Descanso médico de ejemplo',
+            ]);
+        }
+
+        // Geocerca de ejemplo en la sede Lima
+        Sede::where('nombre', 'Sede Lima')->update([
+            'tipo' => 'oficina', 'latitud' => -12.0464000, 'longitud' => -77.0428000, 'radio_metros' => 150,
+        ]);
+
+        // Cliente + sucursal de ejemplo (con geocerca)
+        $cliente = Cliente::firstOrCreate(
+            ['ruc' => '20123456789'],
+            ['razon_social' => 'Comercial Andina S.A.C.', 'nombre_comercial' => 'Andina'],
+        );
+        Sucursal::firstOrCreate(
+            ['cliente_id' => $cliente->id, 'nombre' => 'Tienda Miraflores'],
+            [
+                'direccion' => 'Av. Larco 345', 'latitud' => -12.1211000, 'longitud' => -77.0299000,
+                'radio_metros' => 120, 'departamento' => 'LIMA', 'provincia' => 'LIMA', 'distrito' => 'MIRAFLORES',
+                'centro_costo' => 'CC-001',
+            ],
+        );
+
+        // Ticket de ejemplo (abierto, en la sucursal Miraflores)
+        $sucursal = Sucursal::where('nombre', 'Tienda Miraflores')->first();
+        if ($sucursal) {
+            Ticket::firstOrCreate(
+                ['ticket_atencion' => 'TA-2026-0001'],
+                [
+                    'cliente_id' => $sucursal->cliente_id, 'sucursal_id' => $sucursal->id,
+                    'descripcion' => 'Mantenimiento de equipos - ejemplo', 'estado' => 'abierto',
+                ],
+            );
         }
 
         // Activos de ejemplo (retornables, disponibles)

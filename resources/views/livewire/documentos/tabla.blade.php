@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AvisoDocumento;
 use App\Models\Documento;
 use App\Models\Empleado;
 use App\Models\TipoDocumento;
@@ -77,6 +78,7 @@ new class extends Component {
 
     public function guardar(): void
     {
+        abort_unless(auth()->user()->can($this->editandoId ? 'documentos.editar' : 'documentos.crear'), 403);
         $data = $this->validate();
 
         $payload = [
@@ -101,8 +103,33 @@ new class extends Component {
 
     public function eliminar(int $id): void
     {
+        abort_unless(auth()->user()->can('documentos.eliminar'), 403);
         Documento::findOrFail($id)->delete();
         session()->flash('ok', 'Documento eliminado.');
+    }
+
+    /** Deja registro de que se compartió el aviso por WhatsApp (el destinatario lo elige el usuario). */
+    public function registrarAviso(int $id): void
+    {
+        abort_unless(auth()->user()->can('documentos.avisar'), 403);
+        $doc = Documento::with(['empleado.supervisor', 'tipoDocumento'])->findOrFail($id);
+
+        if (! in_array($doc->estado, ['por_vencer', 'vencido'], true)) {
+            return;
+        }
+
+        AvisoDocumento::create([
+            'documento_id' => $doc->id,
+            'empleado_id' => $doc->empleado_id,
+            'supervisor_id' => $doc->empleado?->supervisor_id,
+            'canal' => 'whatsapp',
+            'destino' => null, // lo elige el usuario en WhatsApp
+            'estado_documento' => $doc->estado,
+            'dias' => $doc->dias_para_vencer,
+            'enviado_por' => auth()->id(),
+        ]);
+
+        session()->flash('ok', 'Aviso preparado y registrado. Elige el contacto en WhatsApp.');
     }
 
     public function resetForm(): void
@@ -162,7 +189,7 @@ new class extends Component {
 
         // Base (filtros que sí se pueden hacer en BD)
         $coleccion = Documento::query()
-            ->with(['empleado', 'tipoDocumento'])
+            ->with(['empleado.supervisor', 'tipoDocumento'])
             ->when($this->buscar, fn ($q) => $q->whereHas('empleado', fn ($e) => $e
                 ->where('nombres', 'like', '%'.$this->buscar.'%')
                 ->orWhere('apellidos', 'like', '%'.$this->buscar.'%')
@@ -221,39 +248,59 @@ new class extends Component {
             {{ session('ok') }}
         </div>
     @endif
+    @if (session('error'))
+        <div class="mb-4 rounded-lg bg-danger-tint text-danger px-4 py-2 text-sm font-medium">
+            {{ session('error') }}
+        </div>
+    @endif
 
     {{-- Resumen semáforo --}}
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
         <button wire:click="$set('filtroEstado', 'vigente')"
-                class="text-left bg-surface border border-line rounded-xl p-4 border-l-4 border-l-success hover:shadow-sm">
-            <div class="text-sm text-muted">🟢 Vigentes</div>
-            <div class="text-2xl font-bold text-ink tabular-nums">{{ $resumen['vigente'] }}</div>
+                class="flex items-center gap-3 text-left bg-surface border border-line rounded-xl p-4 border-l-4 border-l-success hover:shadow-sm transition-shadow">
+            <span class="inline-flex items-center justify-center w-11 h-11 rounded-full bg-success-tint text-success shrink-0">
+                <x-icon name="shield-check" class="w-6 h-6" />
+            </span>
+            <div>
+                <div class="text-sm text-muted">Vigentes</div>
+                <div class="text-2xl font-bold text-ink tabular-nums leading-tight">{{ $resumen['vigente'] }}</div>
+            </div>
         </button>
         <button wire:click="$set('filtroEstado', 'por_vencer')"
-                class="text-left bg-surface border border-line rounded-xl p-4 border-l-4 border-l-warning hover:shadow-sm">
-            <div class="text-sm text-muted">🟡 Por vencer</div>
-            <div class="text-2xl font-bold text-ink tabular-nums">{{ $resumen['por_vencer'] }}</div>
+                class="flex items-center gap-3 text-left bg-surface border border-line rounded-xl p-4 border-l-4 border-l-warning hover:shadow-sm transition-shadow">
+            <span class="inline-flex items-center justify-center w-11 h-11 rounded-full bg-warning-tint text-warning shrink-0">
+                <x-icon name="clock" class="w-6 h-6" />
+            </span>
+            <div>
+                <div class="text-sm text-muted">Por vencer</div>
+                <div class="text-2xl font-bold text-ink tabular-nums leading-tight">{{ $resumen['por_vencer'] }}</div>
+            </div>
         </button>
         <button wire:click="$set('filtroEstado', 'vencido')"
-                class="text-left bg-surface border border-line rounded-xl p-4 border-l-4 border-l-danger hover:shadow-sm">
-            <div class="text-sm text-muted">🔴 Vencidos</div>
-            <div class="text-2xl font-bold text-ink tabular-nums">{{ $resumen['vencido'] }}</div>
+                class="flex items-center gap-3 text-left bg-surface border border-line rounded-xl p-4 border-l-4 border-l-danger hover:shadow-sm transition-shadow">
+            <span class="inline-flex items-center justify-center w-11 h-11 rounded-full bg-danger-tint text-danger shrink-0">
+                <x-icon name="alert" class="w-6 h-6" />
+            </span>
+            <div>
+                <div class="text-sm text-muted">Vencidos</div>
+                <div class="text-2xl font-bold text-ink tabular-nums leading-tight">{{ $resumen['vencido'] }}</div>
+            </div>
         </button>
     </div>
 
     {{-- Barra de acciones --}}
     <div class="flex flex-wrap items-center gap-2 mb-4">
         <div class="flex-1 min-w-[180px] flex items-center gap-2 rounded-lg border border-line bg-canvas px-3 py-2">
-            <span class="text-faint">🔎</span>
+            <x-icon name="search" class="w-4 h-4 text-faint shrink-0" />
             <input type="text" wire:model.live.debounce.400ms="buscar" placeholder="Buscar por empleado o documento…"
                    class="w-full bg-transparent border-0 p-0 text-sm text-ink placeholder:text-faint focus:ring-0">
         </div>
 
         <select wire:model.live="filtroEstado" class="rounded-lg border-line bg-surface text-sm text-ink focus:border-primary focus:ring-primary">
             <option value="">Todos los estados</option>
-            <option value="vigente">🟢 Vigentes</option>
-            <option value="por_vencer">🟡 Por vencer</option>
-            <option value="vencido">🔴 Vencidos</option>
+            <option value="vigente">Vigentes</option>
+            <option value="por_vencer">Por vencer</option>
+            <option value="vencido">Vencidos</option>
             <option value="sin_vigencia">Sin vigencia</option>
         </select>
 
@@ -269,13 +316,15 @@ new class extends Component {
             Solo vigentes
         </label>
 
-        <button wire:click="nuevo" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
-            + Nuevo
-        </button>
+        @can('documentos.crear')
+            <button wire:click="nuevo" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
+                <x-icon name="plus" class="w-4 h-4" /> Nuevo
+            </button>
+        @endcan
 
         <a href="{{ route('documentos.exportar', ['buscar' => $buscar, 'estado' => $filtroEstado, 'tipo' => $filtroTipo]) }}"
-           class="rounded-lg bg-excel hover:brightness-95 text-white text-sm font-semibold px-4 py-2">
-            ⬇ Exportar a Excel
+           class="inline-flex items-center gap-1.5 rounded-lg bg-excel hover:brightness-95 text-white text-sm font-semibold px-4 py-2">
+            <x-icon name="download" class="w-4 h-4" /> Exportar a Excel
         </a>
     </div>
 
@@ -334,17 +383,41 @@ new class extends Component {
                         </td>
                         <td class="px-4 py-3">
                             @if ($d->archivo_path)
-                                <a href="{{ Storage::url($d->archivo_path) }}" target="_blank" class="text-primary hover:underline">Ver</a>
+                                <a href="{{ Storage::url($d->archivo_path) }}" target="_blank" class="inline-flex items-center gap-1 text-primary hover:underline" title="Ver archivo">
+                                    <x-icon name="eye" class="w-4 h-4" /> Ver
+                                </a>
                             @else
                                 <span class="text-faint">—</span>
                             @endif
                         </td>
-                        <td class="px-4 py-3 text-right whitespace-nowrap">
-                            <button wire:click="verHistorial({{ $d->empleado_id }}, {{ $d->tipo_documento_id }})"
-                                    class="text-muted hover:text-primary hover:underline text-sm font-medium" title="Ver todas las versiones de este requisito">Historial</button>
-                            <button wire:click="editar({{ $d->id }})" class="ml-3 text-primary hover:underline text-sm font-medium">Editar</button>
-                            <button wire:click="eliminar({{ $d->id }})" wire:confirm="¿Eliminar este documento?"
-                                    class="ml-3 text-danger hover:underline text-sm font-medium">Eliminar</button>
+                        <td class="px-4 py-3">
+                            <div class="inline-flex items-center gap-1 justify-end w-full">
+                                @php $btn = 'inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-canvas transition-colors'; @endphp
+                                @if (in_array($d->estado, ['por_vencer', 'vencido'], true))
+                                    @can('documentos.avisar')
+                                        <a href="{{ $d->urlWhatsapp() }}" target="_blank"
+                                           wire:click="registrarAviso({{ $d->id }})"
+                                           class="{{ $btn }} text-[#25D366]" title="Avisar al supervisor por WhatsApp">
+                                            <x-icon name="whatsapp" />
+                                        </a>
+                                    @endcan
+                                @endif
+                                <button wire:click="verHistorial({{ $d->empleado_id }}, {{ $d->tipo_documento_id }})"
+                                        class="{{ $btn }} text-muted hover:text-primary" title="Ver historial del requisito">
+                                    <x-icon name="history" />
+                                </button>
+                                @can('documentos.editar')
+                                    <button wire:click="editar({{ $d->id }})" class="{{ $btn }} text-primary" title="Editar">
+                                        <x-icon name="pencil" />
+                                    </button>
+                                @endcan
+                                @can('documentos.eliminar')
+                                    <button wire:click="eliminar({{ $d->id }})" wire:confirm="¿Eliminar este documento?"
+                                            class="{{ $btn }} text-danger" title="Eliminar">
+                                        <x-icon name="trash" />
+                                    </button>
+                                @endcan
+                            </div>
                         </td>
                     </tr>
                 @empty

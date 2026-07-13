@@ -41,6 +41,7 @@ new class extends Component {
     public ?int $area_id = null;
     public ?int $cargo_id = null;
     public ?int $sede_id = null;
+    public ?int $supervisor_id = null;
     public string $fecha_ingreso = '';
     public string $tipo_contrato = '';
     public string $tipo_trabajador = '';
@@ -86,6 +87,7 @@ new class extends Component {
             'area_id' => ['nullable', 'exists:areas,id'],
             'cargo_id' => ['nullable', 'exists:cargos,id'],
             'sede_id' => ['nullable', 'exists:sedes,id'],
+            'supervisor_id' => ['nullable', 'exists:empleados,id'],
             'fecha_ingreso' => ['nullable', 'date'],
             'tipo_contrato' => ['nullable', 'string', 'max:60'],
             'tipo_trabajador' => ['nullable', 'string', 'max:60'],
@@ -132,6 +134,7 @@ new class extends Component {
         $this->area_id = $e->area_id;
         $this->cargo_id = $e->cargo_id;
         $this->sede_id = $e->sede_id;
+        $this->supervisor_id = $e->supervisor_id;
         $this->fecha_ingreso = optional($e->fecha_ingreso)->format('Y-m-d') ?? '';
         $this->tipo_contrato = $e->tipo_contrato ?? '';
         $this->tipo_trabajador = $e->tipo_trabajador ?? '';
@@ -153,6 +156,7 @@ new class extends Component {
 
     public function guardar(): void
     {
+        abort_unless(auth()->user()->can($this->editandoId ? 'empleados.editar' : 'empleados.crear'), 403);
         $data = $this->validate();
 
         // Si está activo, no debe quedar fecha de cese
@@ -180,6 +184,7 @@ new class extends Component {
 
     public function eliminar(int $id): void
     {
+        abort_unless(auth()->user()->can('empleados.eliminar'), 403);
         Empleado::findOrFail($id)->delete();
         session()->flash('ok', 'Empleado eliminado.');
     }
@@ -190,7 +195,7 @@ new class extends Component {
             'editandoId', 'numero_documento', 'nombres', 'apellidos', 'fecha_nacimiento',
             'sexo', 'estado_civil', 'telefono', 'correo', 'direccion',
             'emergencia_nombre', 'emergencia_parentesco', 'emergencia_telefono',
-            'area_id', 'cargo_id', 'sede_id', 'fecha_ingreso', 'tipo_contrato', 'tipo_trabajador',
+            'area_id', 'cargo_id', 'sede_id', 'supervisor_id', 'fecha_ingreso', 'tipo_contrato', 'tipo_trabajador',
             'regimen_laboral', 'modalidad_pago', 'sueldo', 'sistema_pensionario', 'cuspp', 'afp_nombre',
             'tiene_seguro', 'banco', 'numero_cuenta', 'cci',
             'fecha_cese',
@@ -224,6 +229,7 @@ new class extends Component {
             'areas' => Area::orderBy('nombre')->get(),
             'cargos' => Cargo::orderBy('nombre')->get(),
             'sedes' => Sede::orderBy('nombre')->get(),
+            'supervisores' => Empleado::orderBy('apellidos')->orderBy('nombres')->get(),
         ];
     }
 }; ?>
@@ -239,7 +245,7 @@ new class extends Component {
     {{-- Barra de acciones --}}
     <div class="flex flex-wrap items-center gap-2 mb-4">
         <div class="flex-1 min-w-[180px] flex items-center gap-2 rounded-lg border border-line bg-canvas px-3 py-2">
-            <span class="text-faint">🔎</span>
+            <x-icon name="search" class="w-4 h-4 text-faint shrink-0" />
             <input type="text" wire:model.live.debounce.400ms="buscar" placeholder="Buscar por nombre o documento…"
                    class="w-full bg-transparent border-0 p-0 text-sm text-ink placeholder:text-faint focus:ring-0">
         </div>
@@ -251,15 +257,19 @@ new class extends Component {
             <option value="cesado">Cesados</option>
         </select>
 
-        <button wire:click="nuevo"
-                class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
-            + Nuevo
-        </button>
+        @can('empleados.crear')
+            <button wire:click="nuevo"
+                    class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
+                <x-icon name="plus" class="w-4 h-4" /> Nuevo
+            </button>
+        @endcan
 
-        <a href="{{ route('empleados.exportar', ['buscar' => $buscar, 'situacion' => $filtroSituacion]) }}"
-           class="rounded-lg bg-excel hover:brightness-95 text-white text-sm font-semibold px-4 py-2">
-            ⬇ Exportar a Excel
-        </a>
+        @can('empleados.exportar')
+            <a href="{{ route('empleados.exportar', ['buscar' => $buscar, 'situacion' => $filtroSituacion]) }}"
+               class="inline-flex items-center gap-1.5 rounded-lg bg-excel hover:brightness-95 text-white text-sm font-semibold px-4 py-2">
+                <x-icon name="download" class="w-4 h-4" /> Exportar a Excel
+            </a>
+        @endcan
     </div>
 
     {{-- Tabla --}}
@@ -299,10 +309,24 @@ new class extends Component {
                                 </span>
                             @endif
                         </td>
-                        <td class="px-4 py-3 text-right whitespace-nowrap">
-                            <button wire:click="editar({{ $e->id }})" class="text-primary hover:underline text-sm font-medium">Editar</button>
-                            <button wire:click="eliminar({{ $e->id }})" wire:confirm="¿Eliminar a {{ $e->nombres }} {{ $e->apellidos }}?"
-                                    class="ml-3 text-danger hover:underline text-sm font-medium">Eliminar</button>
+                        <td class="px-4 py-3">
+                            <div class="inline-flex items-center gap-1 justify-end w-full">
+                                @php $btn = 'inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-canvas transition-colors'; @endphp
+                                <a href="{{ route('empleados.show', $e) }}" wire:navigate class="{{ $btn }} text-muted hover:text-primary" title="Ver expediente">
+                                    <x-icon name="eye" />
+                                </a>
+                                @can('empleados.editar')
+                                    <button wire:click="editar({{ $e->id }})" class="{{ $btn }} text-primary" title="Editar">
+                                        <x-icon name="pencil" />
+                                    </button>
+                                @endcan
+                                @can('empleados.eliminar')
+                                    <button wire:click="eliminar({{ $e->id }})" wire:confirm="¿Eliminar a {{ $e->nombres }} {{ $e->apellidos }}?"
+                                            class="{{ $btn }} text-danger" title="Eliminar">
+                                        <x-icon name="trash" />
+                                    </button>
+                                @endcan
+                            </div>
                         </td>
                     </tr>
                 @empty
@@ -405,6 +429,18 @@ new class extends Component {
                                     <option value="{{ $s->id }}">{{ $s->nombre }}</option>
                                 @endforeach
                             </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Supervisor</label>
+                            <select wire:model="supervisor_id" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                                <option value="">— Seleccionar —</option>
+                                @foreach ($supervisores as $sup)
+                                    @if ($sup->id !== $editandoId)
+                                        <option value="{{ $sup->id }}">{{ $sup->apellidos }}, {{ $sup->nombres }}</option>
+                                    @endif
+                                @endforeach
+                            </select>
+                            <p class="text-xs text-faint mt-1">Recibe los avisos de vencimiento de documentos.</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-muted mb-1">Fecha de ingreso</label>
