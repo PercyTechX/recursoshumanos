@@ -60,6 +60,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role_or_permission:SuperAdmin|asistencia.ver')->group(function () {
         Route::view('control-asistencia', 'asistencia.index')->name('asistencia.index');
+        Route::view('reportes-asistencia', 'asistencia.reporte')->name('asistencia.reporte');
     });
 
     Route::middleware('role_or_permission:SuperAdmin|empleados.ver')->group(function () {

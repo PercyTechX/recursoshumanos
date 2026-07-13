@@ -94,8 +94,12 @@
                     @endcan
                     @can('asistencia.ver')
                         <a href="{{ route('asistencia.index') }}" wire:navigate
-                           class="{{ $itemBase }} {{ request()->routeIs('asistencia.*') ? $itemOn : $itemOff }}">
+                           class="{{ $itemBase }} {{ request()->routeIs('asistencia.index') ? $itemOn : $itemOff }}">
                             <x-icon name="clock" class="w-5 h-5 shrink-0" /> Control asistencia
+                        </a>
+                        <a href="{{ route('asistencia.reporte') }}" wire:navigate
+                           class="{{ $itemBase }} {{ request()->routeIs('asistencia.reporte') ? $itemOn : $itemOff }}">
+                            <x-icon name="chart" class="w-5 h-5 shrink-0" /> Reportes asistencia
                         </a>
                     @endcan
                     @can('clientes.ver')
