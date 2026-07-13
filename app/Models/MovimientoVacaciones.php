@@ -10,13 +10,17 @@ class MovimientoVacaciones extends Model
     protected $table = 'movimientos_vacaciones';
 
     protected $fillable = [
-        'empleado_id', 'fecha', 'tipo', 'dias', 'solicitud_id', 'observacion', 'created_by',
+        'empleado_id', 'fecha', 'fecha_corte', 'tipo', 'dias', 'solicitud_id', 'observacion', 'created_by',
     ];
 
     protected $casts = [
         'fecha' => 'date',
+        'fecha_corte' => 'date',
         'dias' => 'decimal:2',
     ];
+
+    /** Días de vacaciones que se ganan por mes (régimen general Perú). */
+    public const DEVENGO_MENSUAL = 2.5;
 
     public const APERTURA = 'apertura';
     public const DEVENGADO = 'devengado';

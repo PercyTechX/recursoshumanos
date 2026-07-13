@@ -207,7 +207,7 @@ new class extends Component {
                 ->orderByDesc('fecha_vencimiento')->get(),
             'solicitudes' => SolicitudVacaciones::where('empleado_id', $this->empleadoId)
                 ->orderByDesc('fecha_inicio')->get(),
-            'saldoVac' => (float) MovimientoVacaciones::where('empleado_id', $this->empleadoId)->sum('dias'),
+            'saldoVac' => $empleado->saldo_vacaciones,
             'ausencias' => Ausencia::where('empleado_id', $this->empleadoId)->orderByDesc('fecha_inicio')->get(),
             'diasCalc' => SolicitudVacaciones::calcularDias($this->fecha_inicio, $this->fecha_fin),
         ];
