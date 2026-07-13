@@ -8,9 +8,15 @@ use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome');
 
-Route::view('dashboard', 'dashboard')
-    ->middleware(['auth', 'verified'])
-    ->name('dashboard');
+// Tablero: RRHH/Gerencia ven KPIs; el trabajador (solo su portal) va a "Mi espacio".
+Route::get('dashboard', function () {
+    $u = auth()->user();
+    if ($u->empleado && $u->cannot('empleados.ver') && $u->cannot('documentos.ver') && $u->cannot('tickets.ver')) {
+        return redirect()->route('portal.index');
+    }
+
+    return view('dashboard');
+})->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::view('profile', 'profile')
     ->middleware(['auth'])
