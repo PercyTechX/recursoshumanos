@@ -34,9 +34,9 @@ class ReporteAsistenciaTest extends TestCase
         $this->actingAs($u);
     }
 
-    private function marcar(int $empleadoId, string $tipo, string $fechaHora): void
+    private function marcar(int $empleadoId, string $tipo, string $fechaHora, ?float $lat = null, ?float $lng = null): void
     {
-        Marcacion::create(['empleado_id' => $empleadoId, 'tipo' => $tipo, 'fecha_hora' => $fechaHora]);
+        Marcacion::create(['empleado_id' => $empleadoId, 'tipo' => $tipo, 'fecha_hora' => $fechaHora, 'latitud' => $lat, 'longitud' => $lng]);
     }
 
     public function test_calcula_jornadas_y_horas(): void
@@ -96,8 +96,8 @@ class ReporteAsistenciaTest extends TestCase
     {
         $this->supervisor();
         $e = Empleado::create(['numero_documento' => '30303030', 'nombres' => 'Ana', 'apellidos' => 'Díaz']);
-        $this->marcar($e->id, 'ingreso', '2026-07-05 08:00:00');
-        $this->marcar($e->id, 'salida', '2026-07-05 12:00:00');
+        $this->marcar($e->id, 'ingreso', '2026-07-05 08:00:00', -12.05, -77.04);
+        $this->marcar($e->id, 'salida', '2026-07-05 12:00:00', -12.06, -77.03);
 
         Volt::test('asistencia.reporte')
             ->set('tipo', 'general')

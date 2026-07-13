@@ -20,8 +20,9 @@ class ExcelExport
     /**
      * @param  string          $filename  nombre sugerido (se le agrega .xls si falta)
      * @param  array<string>   $columnas  encabezados de la tabla
-     * @param  iterable        $filas     cada fila es un array de celdas; un valor int|float
-     *                                    se escribe como número, cualquier otro como texto
+     * @param  iterable        $filas     cada fila es un array de celdas. Un valor int|float
+     *                                    se escribe como número; un array ['href'=>url,'text'=>x]
+     *                                    se escribe como hipervínculo; cualquier otro como texto
      * @param  string|null     $titulo    fila de título opcional sobre la tabla
      */
     public static function descargar(string $filename, array $columnas, iterable $filas, ?string $titulo = null): StreamedResponse
@@ -33,6 +34,9 @@ class ExcelExport
         return response()->streamDownload(function () use ($columnas, $filas, $titulo) {
             $esc = fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES | ENT_XML1, 'UTF-8');
             $celda = function ($v) use ($esc) {
+                if (is_array($v) && isset($v['href'])) {
+                    return '<Cell ss:HRef="'.$esc($v['href']).'"><Data ss:Type="String">'.$esc($v['text'] ?? 'Ver').'</Data></Cell>';
+                }
                 if (is_int($v) || is_float($v)) {
                     return '<Cell><Data ss:Type="Number">'.$esc($v).'</Data></Cell>';
                 }

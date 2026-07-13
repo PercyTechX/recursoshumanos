@@ -37,12 +37,18 @@ new class extends Component {
                     'ingreso' => $abierta->fecha_hora,
                     'salida' => $m->fecha_hora,
                     'minutos' => $abierta->fecha_hora->diffInMinutes($m->fecha_hora),
+                    'ing_lat' => $abierta->latitud, 'ing_lng' => $abierta->longitud,
+                    'sal_lat' => $m->latitud, 'sal_lng' => $m->longitud,
                 ];
                 $abierta = null;
             }
         }
         if ($abierta) {
-            $jornadas[] = ['ingreso' => $abierta->fecha_hora, 'salida' => null, 'minutos' => 0];
+            $jornadas[] = [
+                'ingreso' => $abierta->fecha_hora, 'salida' => null, 'minutos' => 0,
+                'ing_lat' => $abierta->latitud, 'ing_lng' => $abierta->longitud,
+                'sal_lat' => null, 'sal_lng' => null,
+            ];
         }
 
         return $jornadas;
@@ -218,6 +224,46 @@ new class extends Component {
         return $filas;
     }
 
+    /** Una fila por jornada (ingreso→salida) de todos los empleados o el filtrado, con GPS. */
+    private function filasJornadas(): array
+    {
+        [$ini, $fin] = $this->rango();
+
+        $marcs = Marcacion::whereBetween('fecha_hora', [$ini, $fin])
+            ->when($this->empleado_id, fn ($q) => $q->where('empleado_id', $this->empleado_id))
+            ->orderBy('fecha_hora')->orderBy('id')->get()
+            ->groupBy('empleado_id');
+
+        $emps = Empleado::whereIn('id', $marcs->keys())->get()->keyBy('id');
+
+        $filas = [];
+        foreach ($marcs as $eid => $lista) {
+            $emp = $emps[$eid] ?? null;
+            foreach ($this->jornadas($lista) as $j) {
+                $filas[] = ['emp' => $emp, 'j' => $j];
+            }
+        }
+
+        usort($filas, fn ($a, $b) => [$a['emp']?->apellidos ?? '', $a['j']['ingreso']->timestamp]
+            <=> [$b['emp']?->apellidos ?? '', $b['j']['ingreso']->timestamp]);
+
+        return $filas;
+    }
+
+    /** GPS "lat, lng" (o vacío) para mostrar en una celda. */
+    private function gps($lat, $lng): string
+    {
+        return (is_null($lat) || is_null($lng)) ? '' : $lat.', '.$lng;
+    }
+
+    /** Celda con hipervínculo a Google Maps (o vacío si no hay coordenadas). */
+    private function verMapa($lat, $lng): array|string
+    {
+        return (is_null($lat) || is_null($lng))
+            ? ''
+            : ['href' => 'https://www.google.com/maps?q='.$lat.','.$lng, 'text' => 'Ver mapa'];
+    }
+
     public function exportar()
     {
         $periodo = 'del '.Carbon::parse($this->desde)->format('d/m/Y').' al '.Carbon::parse($this->hasta)->format('d/m/Y');
@@ -236,19 +282,27 @@ new class extends Component {
             return ExcelExport::descargar($base, $columnas, $filas, 'Reporte de asistencia — Detallado (trazabilidad) '.$periodo);
         }
 
-        $datos = $this->calcular();
-        $columnas = ['Apellidos', 'Nombres', 'Documento', 'Jornadas', 'Horas (decimal)', 'Horas (hh:mm)', 'Tickets operados'];
-        $filas = array_map(fn ($f) => [
-            $f['empleado']?->apellidos,
-            $f['empleado']?->nombres,
-            $f['empleado']?->numero_documento,
-            (int) $f['jornadas'],
-            round($f['minutos'] / 60, 2),
-            intdiv($f['minutos'], 60).':'.str_pad($f['minutos'] % 60, 2, '0', STR_PAD_LEFT),
-            (int) $f['tickets'],
-        ], $datos['filas']);
+        $columnas = ['Apellidos', 'Nombres', 'Documento', 'Fecha', 'Ingreso', 'Salida', 'Horas (decimal)', 'Horas (hh:mm)', 'GPS Ingreso', 'Ver Ingreso', 'GPS Salida', 'Ver Salida'];
+        $filas = array_map(function ($f) {
+            $j = $f['j'];
 
-        return ExcelExport::descargar($base, $columnas, $filas, 'Reporte de asistencia — General '.$periodo);
+            return [
+                $f['emp']?->apellidos,
+                $f['emp']?->nombres,
+                $f['emp']?->numero_documento,
+                $j['ingreso']->format('d/m/Y'),
+                $j['ingreso']->format('H:i'),
+                $j['salida']?->format('H:i') ?? '',
+                $j['salida'] ? round($j['minutos'] / 60, 2) : '',
+                $j['salida'] ? intdiv($j['minutos'], 60).':'.str_pad($j['minutos'] % 60, 2, '0', STR_PAD_LEFT) : '',
+                $this->gps($j['ing_lat'], $j['ing_lng']),
+                $this->verMapa($j['ing_lat'], $j['ing_lng']),
+                $this->gps($j['sal_lat'], $j['sal_lng']),
+                $this->verMapa($j['sal_lat'], $j['sal_lng']),
+            ];
+        }, $this->filasJornadas());
+
+        return ExcelExport::descargar($base, $columnas, $filas, 'Reporte de asistencia — General (jornadas) '.$periodo);
     }
 
     public function with(): array
