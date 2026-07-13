@@ -145,13 +145,69 @@ VITE_APP_NAME="Sistema RRHH"
 
 ---
 
-## Actualizaciones futuras (nuevo deploy)
+## Actualizar una versión ya desplegada (2º despliegue en adelante)
 
-1. En tu PC: `npm run build` → `git add` → `commit` → `push` a `main`.
-2. Repo público un momento (o método ZIP) → Git Version Control → **Update from
-   Remote** / **Add Deployments** para traer los cambios.
-3. Si hay **migraciones nuevas:** poner de nuevo `APP_SETUP_TOKEN` en `.env`, abrir
-   `/_setup/EL_TOKEN`, y luego vaciarlo.
+⚠️ **La interfaz de Git de yachay NO tiene "Update from Remote"/pull** (el lápiz solo
+renombra, el ⬆ queda deshabilitado, "Add Deployments" da *"Couldn't create deployment"*).
+Por eso, para **traer código nuevo** hay que **RE-CLONAR**:
+
+1. En tu PC: `npm run build` → `git add` → `commit` → `push` a `main`. Repo **público**.
+2. cPanel → **Git Version Control** → 🗑️ **borra** el repo `recursoshumanos`.
+3. **File Manager** → borra la carpeta `repositories/recursoshumanos` (si quedó).
+   *(Se pierde el `.env`; lo recreas — sus valores están en las notas privadas.)*
+4. **Create Repository** → clonar de nuevo (mismo path `repositories/recursoshumanos`).
+5. **Re-crear el `.env`** (File Manager) con los valores de producción.
+6. **Permisos** (ver abajo — al re-clonar quedan mal) y **handler de PHP** (ver abajo).
+7. Si hay **migraciones nuevas:** `APP_SETUP_TOKEN` en `.env` → abrir `/_setup/EL_TOKEN`
+   → vaciar el token.
+
+### ⚑ Al re-clonar SIEMPRE revisar (nos pasó, 2º despliegue)
+
+**a) Permisos (403 "Server unable to read htaccess file, denying access to be safe")**
+El clon deja la carpeta del repo en **700** → Apache no puede entrar. Regla:
+**carpetas = 755, archivos = 644.** En concreto, en File Manager (⋮ → Change Permissions):
+- `repositories/recursoshumanos` → **755** (esta es la que suele quedar en 700).
+- `.../public` → **755** · `public/.htaccess` y `public/index.php` → **644**.
+
+**b) Handler de PHP (error "Composer detected issues … requires PHP >= 8.2.0")**
+Al re-clonar, el `.htaccess` de git **borra el handler de PHP** de cPanel → el sitio
+vuelve al PHP por defecto (8.1) aunque MultiPHP diga 8.2 (MultiPHP no aplica al docroot
+personalizado). Este servidor usa **CloudLinux/LSAPI** → el handler lleva el sufijo
+**`___lsphp`**. Agregar **al inicio** de `public/.htaccess`:
+
+```apache
+# php -- BEGIN cPanel-generated handler, do not edit
+<IfModule mime_module>
+  AddHandler application/x-httpd-ea-php82___lsphp .php .php8 .phtml
+</IfModule>
+# php -- END cPanel-generated handler, do not edit
+```
+
+*(Para saber el formato exacto, copia el bloque `# php -- BEGIN cPanel-generated handler`
+del `.htaccess` de un sitio que ya funcione, ej. `public_html/.htaccess`, y cambia la
+versión a `php82`.)*
+
+## Enlace de `public/storage` sin SSH
+
+Laravel guarda los archivos subidos (documentos, firmas) en `storage/app/public` y los
+sirve vía un **symlink** `public/storage` → `../storage/app/public`. El `.cpanel.yml`
+lo crea al desplegar, pero como el "deploy" de yachay falla, se crea a mano con un
+**script PHP de un solo uso**:
+
+1. File Manager → crea `repositories/recursoshumanos/public/enlazar-storage.php` con:
+   ```php
+   <?php
+   $target = __DIR__.'/../storage/app/public';
+   $link = __DIR__.'/storage';
+   if (file_exists($link)) { echo 'Ya existe.'; }
+   elseif (@symlink($target, $link)) { echo 'Symlink creado OK.'; }
+   else { echo 'symlink() no permitido en este hosting — pedir a soporte o usar ruta.'; }
+   @unlink(__FILE__); // el script se borra solo
+   ```
+2. Abre `https://rrhh.gds.pe/enlazar-storage.php` → debe decir *"Symlink creado OK"*
+   (y el archivo se auto-elimina).
+3. Si dice que `symlink()` no está permitido: pedir a soporte de yachay que cree el
+   symlink, o servir los archivos por una ruta Laravel.
 
 ## Problemas que encontramos (y solución)
 
@@ -161,10 +217,13 @@ VITE_APP_NAME="Sistema RRHH"
 | `contains a password. You cannot use this URL` | token en la URL | no usar token; repo público |
 | `Outdated security token` en cPanel | sesión del panel caducó | refrescar la página y reintentar |
 | `DNS_PROBE / no se encuentra rrhh.gds.pe` | DNS del subdominio propagando | esperar; verificar registro A en Zone Editor |
+| `Couldn't create deployment` / no hay pull | la UI de yachay no soporta pull/deploy | **re-clonar** (ver arriba) |
+| `403 Server unable to read htaccess file` | carpeta del repo en 700 (o algo escribible por grupo) | carpetas **755**, archivos **644** |
+| `Composer … requires PHP >= 8.2.0` | falta el handler de PHP en `.htaccess` | agregar `AddHandler …ea-php82___lsphp …` |
 | No veo el `.env` en File Manager | archivos ocultos escondidos | activar "Show Hidden Files" |
 | 500 al abrir la app | `APP_KEY` vacío o `.env` mal | `APP_DEBUG=true` para ver el error; corregir |
 | Estilos no cargan | falta `public/build` o `APP_URL` malo | verificar que `public/build` se versionó y `APP_URL` |
-| Archivos/firmas no se ven | falta `public/storage` | re-deploy (`.cpanel.yml`) o crear symlink |
+| Archivos/firmas no se ven | falta `public/storage` | crear el symlink (ver arriba) |
 
 ## Credenciales
 
