@@ -91,6 +91,18 @@ class ControlAsistenciaTest extends TestCase
         $this->assertSame('2026-08-01 18:30', $m->fresh()->fecha_hora->format('Y-m-d H:i'));
     }
 
+    public function test_marcaciones_filtran_por_defecto_al_mes_actual(): void
+    {
+        $this->supervisor();
+        $emp = $this->empleado();
+        $reciente = Marcacion::create(['empleado_id' => $emp->id, 'tipo' => 'ingreso', 'fecha_hora' => now()->setTime(8, 0)]);
+        $antigua = Marcacion::create(['empleado_id' => $emp->id, 'tipo' => 'ingreso', 'fecha_hora' => now()->subMonths(3)->setTime(8, 0)]);
+
+        Volt::test('asistencia.tabla')
+            ->assertSee($reciente->fecha_hora->format('d/m/Y'))
+            ->assertDontSee($antigua->fecha_hora->format('d/m/Y'));
+    }
+
     public function test_liberar_tecnico_de_un_ticket(): void
     {
         $sup = $this->supervisor();

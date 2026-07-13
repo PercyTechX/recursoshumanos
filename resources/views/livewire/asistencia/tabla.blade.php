@@ -16,6 +16,12 @@ new class extends Component {
     public string $vista = 'marcaciones';
     public string $filtroEmpleado = '';
 
+    // Filtro de fechas de marcaciones (por defecto: del inicio del mes actual a hoy)
+    #[Url]
+    public string $desde = '';
+    #[Url]
+    public string $hasta = '';
+
     // Marcación manual
     public bool $mostrarMarc = false;
     public ?int $marcId = null;
@@ -36,7 +42,23 @@ new class extends Component {
     public string $av_estado = 'iniciado';
     public string $av_motivo = '';
 
+    public function mount(): void
+    {
+        $this->desde = $this->desde ?: now()->startOfMonth()->toDateString();
+        $this->hasta = $this->hasta ?: now()->toDateString();
+    }
+
     public function updatingFiltroEmpleado(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingDesde(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingHasta(): void
     {
         $this->resetPage();
     }
@@ -156,6 +178,8 @@ new class extends Component {
     {
         return [
             'marcaciones' => Marcacion::query()->with(['empleado', 'registradoPor'])
+                ->when($this->desde, fn ($q) => $q->where('fecha_hora', '>=', $this->desde.' 00:00:00'))
+                ->when($this->hasta, fn ($q) => $q->where('fecha_hora', '<=', $this->hasta.' 23:59:59'))
                 ->when($this->filtroEmpleado, fn ($q) => $q->whereHas('empleado', fn ($e) => $e
                     ->where('nombres', 'like', '%'.$this->filtroEmpleado.'%')
                     ->orWhere('apellidos', 'like', '%'.$this->filtroEmpleado.'%')
@@ -197,9 +221,19 @@ new class extends Component {
     </div>
 
     @if ($vista === 'marcaciones')
-        <div class="flex-1 min-w-[180px] flex items-center gap-2 rounded-lg border border-line bg-canvas px-3 py-2 mb-4 max-w-sm">
-            <x-icon name="search" class="w-4 h-4 text-faint shrink-0" />
-            <input type="text" wire:model.live.debounce.400ms="filtroEmpleado" placeholder="Filtrar por empleado…" class="w-full bg-transparent border-0 p-0 text-sm text-ink placeholder:text-faint focus:ring-0">
+        <div class="flex flex-wrap items-end gap-3 mb-4">
+            <div class="flex-1 min-w-[180px] flex items-center gap-2 rounded-lg border border-line bg-canvas px-3 py-2 max-w-sm">
+                <x-icon name="search" class="w-4 h-4 text-faint shrink-0" />
+                <input type="text" wire:model.live.debounce.400ms="filtroEmpleado" placeholder="Filtrar por empleado…" class="w-full bg-transparent border-0 p-0 text-sm text-ink placeholder:text-faint focus:ring-0">
+            </div>
+            <div>
+                <label class="block text-xs text-muted mb-1">Desde</label>
+                <input type="date" wire:model.live="desde" class="rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+            </div>
+            <div>
+                <label class="block text-xs text-muted mb-1">Hasta</label>
+                <input type="date" wire:model.live="hasta" class="rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+            </div>
         </div>
 
         <div class="overflow-x-auto rounded-xl border border-line bg-surface">
