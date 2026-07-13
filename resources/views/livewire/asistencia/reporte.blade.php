@@ -412,7 +412,10 @@ new class extends Component {
     {{-- DETALLADO: línea de tiempo (trazabilidad) --}}
     @if ($tipo === 'detallado')
         @if (! $empleado_id)
-            <div class="bg-surface border border-line rounded-xl p-8 text-center text-muted">Elige un <strong>empleado</strong> para ver su trazabilidad del día.</div>
+            <div class="bg-surface border border-line rounded-xl p-8 text-center text-muted">
+                Elige un <strong>empleado</strong> para ver su trazabilidad del día en pantalla.<br>
+                <span class="text-sm text-faint">El botón <strong>Exportar a Excel</strong> descarga la trazabilidad de <strong>todos</strong> (una fila por evento) aunque no elijas ninguno.</span>
+            </div>
         @elseif (! count($turnos))
             <div class="bg-surface border border-line rounded-xl p-8 text-center text-faint">Sin actividad en el rango elegido.</div>
         @else
