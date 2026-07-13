@@ -92,6 +92,12 @@
                             <x-icon name="ticket" class="w-5 h-5 shrink-0" /> Tickets
                         </a>
                     @endcan
+                    @can('asistencia.ver')
+                        <a href="{{ route('asistencia.index') }}" wire:navigate
+                           class="{{ $itemBase }} {{ request()->routeIs('asistencia.*') ? $itemOn : $itemOff }}">
+                            <x-icon name="clock" class="w-5 h-5 shrink-0" /> Control asistencia
+                        </a>
+                    @endcan
                     @can('clientes.ver')
                         <a href="{{ route('clientes.index') }}" wire:navigate
                            class="{{ $itemBase }} {{ request()->routeIs('clientes.*') || request()->routeIs('sedes.*') ? $itemOn : $itemOff }}">

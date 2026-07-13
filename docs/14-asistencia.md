@@ -1,7 +1,7 @@
 # Módulo de Asistencia + Tickets (con geocerca)
 
-> **Estado:** 🚧 EN CONSTRUCCIÓN por pasos (2026-07-10). **Pasos 1–4 hechos y
-> probados** (rama `feature/asistencia`). Falta el Paso 5.
+> **Estado:** ✅ COMPLETO (2026-07-11, rama `feature/asistencia`). Los 5 pasos
+> hechos y probados.
 
 ## Avance (rama `feature/asistencia`)
 
@@ -11,7 +11,7 @@
 | **2. Tickets** | Supervisor crea tickets (IDTICKET + ticket_atención único, cliente + ubicación sede/sucursal, abrir/cerrar) | ✅ |
 | **3. Marcación** | Técnico marca ingreso/salida con **GPS** desde "Mi espacio" (varias jornadas/día, metadato del equipo) | ✅ |
 | **4. Operación** | Técnico opera el ticket: **Iniciado→En ejecución→Terminado** en orden, con **geocerca** (haversine) y **abortar misión** (cuenta regresiva 10s); 1 ticket activo; varios técnicos refuerzan | ✅ |
-| **5. Registro manual** | El supervisor ingresa manualmente asistencia y estados de ticket (sin señal / robo), corrige hora, libera técnicos | ⏳ pendiente |
+| **5. Registro manual** | Menú **Control asistencia** (supervisor): marcación manual + **corregir hora** + **liberar técnico** + **avance manual** de ticket (todo con es_manual + registrado_por + motivo) | ✅ |
 
 Tablas: `clientes`, `sucursales`, `ubigeos`, `tickets`, `marcaciones`,
 `ticket_tecnico`, `ticket_avances` (bitácora con GPS). Trait `TieneGeocerca`.

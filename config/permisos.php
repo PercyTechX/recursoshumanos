@@ -44,6 +44,10 @@ return [
         'label' => 'Tickets',
         'acciones' => ['ver' => 'Ver', 'crear' => 'Crear', 'editar' => 'Editar', 'cerrar' => 'Cerrar', 'eliminar' => 'Eliminar'],
     ],
+    'asistencia' => [
+        'label' => 'Asistencia (control)',
+        'acciones' => ['ver' => 'Ver', 'registrar' => 'Registrar manual', 'editar' => 'Editar/corregir'],
+    ],
     'usuarios' => [
         'label' => 'Usuarios',
         'acciones' => ['ver' => 'Ver', 'crear' => 'Crear', 'editar' => 'Editar', 'eliminar' => 'Eliminar'],
