@@ -270,13 +270,14 @@ new class extends Component {
         $base = 'reporte-asistencia-'.$this->tipo.'-'.$this->desde.'_'.$this->hasta;
 
         if ($this->tipo === 'detallado') {
-            $columnas = ['Apellidos', 'Nombres', 'Documento', 'Fecha', 'Hora', 'Turno', 'Evento', 'Ticket', 'Ubicación', 'Geocerca', 'Latitud', 'Longitud'];
+            $columnas = ['Apellidos', 'Nombres', 'Documento', 'Fecha', 'Hora', 'Turno', 'Evento', 'Ticket', 'Ubicación', 'Geocerca', 'Latitud', 'Longitud', 'Ver mapa'];
             $filas = array_map(fn ($f) => [
                 $f['apellidos'], $f['nombres'], $f['documento'],
                 $f['hora']->format('d/m/Y'), $f['hora']->format('H:i'),
                 $f['turno'], $f['evento'], $f['ticket'], $f['ubicacion'], $f['geocerca'],
                 is_null($f['lat']) ? '' : (float) $f['lat'],
                 is_null($f['lng']) ? '' : (float) $f['lng'],
+                $this->verMapa($f['lat'], $f['lng']),
             ], $this->filasDetalladas());
 
             return ExcelExport::descargar($base, $columnas, $filas, 'Reporte de asistencia — Detallado (trazabilidad) '.$periodo);
