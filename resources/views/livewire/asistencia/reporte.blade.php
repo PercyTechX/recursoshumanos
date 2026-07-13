@@ -3,6 +3,7 @@
 use App\Models\Empleado;
 use App\Models\Marcacion;
 use App\Models\TicketAvance;
+use App\Support\ExcelExport;
 use Illuminate\Support\Carbon;
 use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
@@ -167,26 +168,87 @@ new class extends Component {
         return $turnos;
     }
 
+    /** IDs de empleados con marcaciones o avances de tickets dentro del rango. */
+    private function empleadoIdsEnRango(): array
+    {
+        [$ini, $fin] = $this->rango();
+
+        $marc = Marcacion::whereBetween('fecha_hora', [$ini, $fin])
+            ->when($this->empleado_id, fn ($q) => $q->where('empleado_id', $this->empleado_id))
+            ->distinct()->pluck('empleado_id');
+
+        $tick = TicketAvance::whereBetween('ticket_avances.fecha_hora', [$ini, $fin])
+            ->join('ticket_tecnico', 'ticket_tecnico.id', '=', 'ticket_avances.ticket_tecnico_id')
+            ->when($this->empleado_id, fn ($q) => $q->where('ticket_tecnico.empleado_id', $this->empleado_id))
+            ->distinct()->pluck('ticket_tecnico.empleado_id');
+
+        return $marc->merge($tick)->unique()->values()->all();
+    }
+
+    /** Trazabilidad aplanada: una fila por evento (para todos los empleados o el filtrado). */
+    private function filasDetalladas(): array
+    {
+        $ids = $this->empleadoIdsEnRango();
+        $emps = Empleado::whereIn('id', $ids)->get()->keyBy('id');
+
+        $filas = [];
+        foreach ($ids as $eid) {
+            $emp = $emps[$eid] ?? null;
+            foreach ($this->timeline($eid) as $ti => $t) {
+                foreach ($t['eventos'] as $ev) {
+                    $filas[] = [
+                        'apellidos' => $emp?->apellidos,
+                        'nombres' => $emp?->nombres,
+                        'documento' => $emp?->numero_documento,
+                        'hora' => $ev['hora'],
+                        'turno' => $ti + 1,
+                        'evento' => $ev['clase'] === 'marcacion' ? $ev['titulo'] : 'Ticket',
+                        'ticket' => $ev['clase'] === 'ticket' ? str_replace('Ticket ', '', $ev['titulo']) : '',
+                        'ubicacion' => $ev['ubicacion'],
+                        'geocerca' => is_null($ev['dentro']) ? '' : ($ev['dentro'] ? 'Dentro' : 'Fuera'),
+                        'lat' => $ev['lat'],
+                        'lng' => $ev['lng'],
+                    ];
+                }
+            }
+        }
+
+        usort($filas, fn ($a, $b) => [$a['apellidos'], $a['hora']->timestamp] <=> [$b['apellidos'], $b['hora']->timestamp]);
+
+        return $filas;
+    }
+
     public function exportar()
     {
-        $datos = $this->calcular();
-        $filename = 'reporte-asistencia-'.$this->desde.'_'.$this->hasta.'.csv';
+        $periodo = 'del '.Carbon::parse($this->desde)->format('d/m/Y').' al '.Carbon::parse($this->hasta)->format('d/m/Y');
+        $base = 'reporte-asistencia-'.$this->tipo.'-'.$this->desde.'_'.$this->hasta;
 
-        return response()->streamDownload(function () use ($datos) {
-            $out = fopen('php://output', 'w');
-            fprintf($out, "\xEF\xBB\xBF"); // BOM UTF-8 (Excel)
-            fputcsv($out, ['Empleado', 'Documento', 'Jornadas', 'Horas', 'Tickets operados']);
-            foreach ($datos['filas'] as $f) {
-                fputcsv($out, [
-                    trim(($f['empleado']?->apellidos ?? '').', '.($f['empleado']?->nombres ?? '')),
-                    $f['empleado']?->numero_documento,
-                    $f['jornadas'],
-                    number_format($f['minutos'] / 60, 2),
-                    $f['tickets'],
-                ]);
-            }
-            fclose($out);
-        }, $filename, ['Content-Type' => 'text/csv']);
+        if ($this->tipo === 'detallado') {
+            $columnas = ['Apellidos', 'Nombres', 'Documento', 'Fecha', 'Hora', 'Turno', 'Evento', 'Ticket', 'Ubicación', 'Geocerca', 'Latitud', 'Longitud'];
+            $filas = array_map(fn ($f) => [
+                $f['apellidos'], $f['nombres'], $f['documento'],
+                $f['hora']->format('d/m/Y'), $f['hora']->format('H:i'),
+                $f['turno'], $f['evento'], $f['ticket'], $f['ubicacion'], $f['geocerca'],
+                is_null($f['lat']) ? '' : (float) $f['lat'],
+                is_null($f['lng']) ? '' : (float) $f['lng'],
+            ], $this->filasDetalladas());
+
+            return ExcelExport::descargar($base, $columnas, $filas, 'Reporte de asistencia — Detallado (trazabilidad) '.$periodo);
+        }
+
+        $datos = $this->calcular();
+        $columnas = ['Apellidos', 'Nombres', 'Documento', 'Jornadas', 'Horas (decimal)', 'Horas (hh:mm)', 'Tickets operados'];
+        $filas = array_map(fn ($f) => [
+            $f['empleado']?->apellidos,
+            $f['empleado']?->nombres,
+            $f['empleado']?->numero_documento,
+            (int) $f['jornadas'],
+            round($f['minutos'] / 60, 2),
+            intdiv($f['minutos'], 60).':'.str_pad($f['minutos'] % 60, 2, '0', STR_PAD_LEFT),
+            (int) $f['tickets'],
+        ], $datos['filas']);
+
+        return ExcelExport::descargar($base, $columnas, $filas, 'Reporte de asistencia — General '.$periodo);
     }
 
     public function with(): array

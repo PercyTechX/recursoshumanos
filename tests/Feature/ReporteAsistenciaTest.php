@@ -92,7 +92,7 @@ class ReporteAsistenciaTest extends TestCase
             ->assertSee('dentro de zona');
     }
 
-    public function test_exporta_csv(): void
+    public function test_exporta_general_xls(): void
     {
         $this->supervisor();
         $e = Empleado::create(['numero_documento' => '30303030', 'nombres' => 'Ana', 'apellidos' => 'Díaz']);
@@ -100,8 +100,29 @@ class ReporteAsistenciaTest extends TestCase
         $this->marcar($e->id, 'salida', '2026-07-05 12:00:00');
 
         Volt::test('asistencia.reporte')
+            ->set('tipo', 'general')
             ->set('desde', '2026-07-01')->set('hasta', '2026-07-31')
             ->call('exportar')
-            ->assertFileDownloaded();
+            ->assertFileDownloaded('reporte-asistencia-general-2026-07-01_2026-07-31.xls');
+    }
+
+    public function test_exporta_detallado_xls_con_trazabilidad(): void
+    {
+        $this->supervisor();
+        $e = Empleado::create(['numero_documento' => '40404040', 'nombres' => 'Luis', 'apellidos' => 'Campo']);
+        $this->marcar($e->id, 'ingreso', '2026-07-05 08:00:00');
+
+        $cliente = Cliente::create(['razon_social' => 'C']);
+        $suc = Sucursal::create(['cliente_id' => $cliente->id, 'nombre' => 'Local', 'latitud' => -12, 'longitud' => -77, 'radio_metros' => 100]);
+        $ticket = Ticket::create(['ticket_atencion' => 'TA-77', 'cliente_id' => $cliente->id, 'sucursal_id' => $suc->id]);
+        $tt = TicketTecnico::create(['ticket_id' => $ticket->id, 'empleado_id' => $e->id, 'estado_trabajo' => 'en_ejecucion']);
+        TicketAvance::create(['ticket_tecnico_id' => $tt->id, 'estado' => 'en_ejecucion', 'fecha_hora' => '2026-07-05 09:30:00', 'dentro_geocerca' => true, 'latitud' => -12, 'longitud' => -77]);
+        $this->marcar($e->id, 'salida', '2026-07-05 17:00:00');
+
+        Volt::test('asistencia.reporte')
+            ->set('tipo', 'detallado')
+            ->set('desde', '2026-07-01')->set('hasta', '2026-07-31')
+            ->call('exportar')
+            ->assertFileDownloaded('reporte-asistencia-detallado-2026-07-01_2026-07-31.xls');
     }
 }
