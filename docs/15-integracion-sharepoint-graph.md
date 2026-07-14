@@ -1,6 +1,8 @@
 # 15 · Integración de documentos con SharePoint (Microsoft Graph)
 
-> **Estado:** plan de diseño aprobado. Pendiente de construir.
+> **Estado:** Fase 0 (setup) ✅ y Fase 1 (módulo Documentos) ✅ construidas y verificadas
+> contra el SharePoint real (subir/leer/borrar OK) — 2026-07-14. Falta: poner las
+> GRAPH_* en el `.env` de PRODUCCIÓN y correr `graph:ping` allí. Fase 2/3 pendientes.
 > **Objetivo del usuario:** que al subir un documento en la app, el archivo aterrice
 > **solo en SharePoint** (un paso, como hoy), sin el "copiar link / pegar link".
 > Ya existe una **biblioteca de documentos de SharePoint** y hay **admin de M365**.

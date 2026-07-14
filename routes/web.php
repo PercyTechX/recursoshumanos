@@ -75,6 +75,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role_or_permission:SuperAdmin|documentos.ver')->group(function () {
         Route::view('documentos', 'documentos.index')->name('documentos.index');
         Route::get('documentos/exportar', [DocumentoController::class, 'exportar'])->name('documentos.exportar');
+        Route::get('documentos/{documento}/archivo', [DocumentoController::class, 'archivo'])->name('documentos.archivo');
     });
 
     Route::middleware('role_or_permission:SuperAdmin|documentos_compartidos.ver')->group(function () {

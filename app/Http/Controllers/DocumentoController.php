@@ -3,11 +3,50 @@
 namespace App\Http\Controllers;
 
 use App\Models\Documento;
+use App\Services\SharePoint\SharePointDocs;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DocumentoController extends Controller
 {
+    /**
+     * Sirve el archivo de un documento sin exponer la URL directa: si está en
+     * SharePoint lo transmite vía Graph (app-only); si quedó local, lo sirve del disco.
+     */
+    public function archivo(Documento $documento): Response
+    {
+        abort_unless(auth()->user()->can('documentos.ver'), 403);
+
+        $nombre = $documento->archivo_nombre ?: 'documento';
+
+        if ($documento->storage_driver === 'sharepoint' && $documento->sharepoint_item_id) {
+            $contenido = app(SharePointDocs::class)->contenido($documento->sharepoint_item_id);
+
+            return response($contenido, 200, [
+                'Content-Type' => $this->mimePorNombre($nombre),
+                'Content-Disposition' => 'inline; filename="'.addslashes($nombre).'"',
+            ]);
+        }
+
+        abort_unless($documento->archivo_path && Storage::disk('public')->exists($documento->archivo_path), 404);
+
+        return Storage::disk('public')->response($documento->archivo_path, $nombre, [
+            'Content-Disposition' => 'inline',
+        ]);
+    }
+
+    private function mimePorNombre(string $nombre): string
+    {
+        return match (strtolower(pathinfo($nombre, PATHINFO_EXTENSION))) {
+            'pdf' => 'application/pdf',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            default => 'application/octet-stream',
+        };
+    }
+
     /**
      * Exporta el listado de documentos (con su estado de semáforo) a CSV
      * que Excel abre directamente. Respeta los filtros de la pantalla.

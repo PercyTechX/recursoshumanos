@@ -4,7 +4,11 @@ use App\Models\AvisoDocumento;
 use App\Models\Documento;
 use App\Models\Empleado;
 use App\Models\TipoDocumento;
+use App\Services\SharePoint\SharePointDocs;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
 use Livewire\WithFileUploads;
@@ -79,7 +83,7 @@ new class extends Component {
     public function guardar(): void
     {
         abort_unless(auth()->user()->can($this->editandoId ? 'documentos.editar' : 'documentos.crear'), 403);
-        $data = $this->validate();
+        $this->validate();
 
         $payload = [
             'empleado_id' => $this->empleado_id,
@@ -90,15 +94,93 @@ new class extends Component {
         ];
 
         if ($this->archivo) {
-            $payload['archivo_path'] = $this->archivo->store('documentos', 'public');
+            // 1) Guardar temporal en el servidor para no perder el archivo si SharePoint falla.
             $payload['archivo_nombre'] = $this->archivo->getClientOriginalName();
+            $payload['archivo_path'] = $this->archivo->store('documentos', 'public');
+            $payload['storage_driver'] = 'local';
+            $payload['upload_status'] = 'pendiente';
+            $payload['upload_error'] = null;
+
+            // 2) Intentar subir a SharePoint.
+            try {
+                $r = app(SharePointDocs::class)->subir(
+                    $this->archivo,
+                    $this->carpetaEmpleado($this->empleado_id),
+                    now()->format('Ymd_His').'_'.$this->archivo->getClientOriginalName(),
+                );
+                $payload['storage_driver'] = 'sharepoint';
+                $payload['sharepoint_item_id'] = $r['item_id'];
+                $payload['sharepoint_web_url'] = $r['web_url'];
+                $payload['upload_status'] = 'subido';
+                // 3) Ya está en SharePoint → borrar el temporal local.
+                Storage::disk('public')->delete($payload['archivo_path']);
+                $payload['archivo_path'] = null;
+            } catch (\Throwable $e) {
+                // Queda en el servidor con estado "pendiente" para reintentar. Nada se pierde.
+                $payload['upload_error'] = Str::limit($e->getMessage(), 240);
+                Log::warning('SharePoint: subida fallida, queda pendiente. '.$e->getMessage());
+            }
         }
 
         Documento::updateOrCreate(['id' => $this->editandoId], $payload);
 
         $this->mostrarForm = false;
         $this->resetForm();
-        session()->flash('ok', 'Documento guardado correctamente.');
+        session()->flash('ok', $this->mensajeGuardado($payload));
+    }
+
+    /** Reintenta subir a SharePoint un documento que quedó "pendiente" (desde el temporal local). */
+    public function reintentarSubida(int $id): void
+    {
+        abort_unless(auth()->user()->can('documentos.editar'), 403);
+        $doc = Documento::findOrFail($id);
+
+        if ($doc->upload_status === 'subido' || ! $doc->archivo_path || ! Storage::disk('public')->exists($doc->archivo_path)) {
+            session()->flash('ok', 'No hay archivo pendiente por subir.');
+
+            return;
+        }
+
+        try {
+            $r = app(SharePointDocs::class)->subirContenido(
+                Storage::disk('public')->get($doc->archivo_path),
+                Storage::disk('public')->mimeType($doc->archivo_path) ?: 'application/octet-stream',
+                $this->carpetaEmpleado($doc->empleado_id),
+                now()->format('Ymd_His').'_'.($doc->archivo_nombre ?: 'archivo'),
+            );
+            Storage::disk('public')->delete($doc->archivo_path);
+            $doc->update([
+                'storage_driver' => 'sharepoint',
+                'sharepoint_item_id' => $r['item_id'],
+                'sharepoint_web_url' => $r['web_url'],
+                'upload_status' => 'subido',
+                'upload_error' => null,
+                'archivo_path' => null,
+            ]);
+            session()->flash('ok', 'Documento subido a SharePoint.');
+        } catch (\Throwable $e) {
+            $doc->update(['upload_error' => Str::limit($e->getMessage(), 240)]);
+            Log::warning('SharePoint: reintento fallido. '.$e->getMessage());
+            session()->flash('ok', 'No se pudo subir a SharePoint todavía. Sigue pendiente.');
+        }
+    }
+
+    /** Carpeta destino en la biblioteca: Expedientes/{DNI - Apellidos Nombres}. */
+    private function carpetaEmpleado(?int $empleadoId): string
+    {
+        $emp = Empleado::find($empleadoId);
+        $etiqueta = trim(($emp?->numero_documento ?? 's-d').' - '.($emp?->apellidos ?? '').' '.($emp?->nombres ?? ''));
+
+        return 'Expedientes/'.$etiqueta;
+    }
+
+    private function mensajeGuardado(array $payload): string
+    {
+        if (($payload['upload_status'] ?? null) === 'pendiente') {
+            return 'Documento guardado. El archivo quedó pendiente de subir a SharePoint (usa "Reintentar").';
+        }
+
+        return 'Documento guardado correctamente.';
     }
 
     public function eliminar(int $id): void
@@ -382,10 +464,18 @@ new class extends Component {
                             </span>
                         </td>
                         <td class="px-4 py-3">
-                            @if ($d->archivo_path)
-                                <a href="{{ Storage::url($d->archivo_path) }}" target="_blank" class="inline-flex items-center gap-1 text-primary hover:underline" title="Ver archivo">
+                            @if ($d->sharepoint_item_id || $d->archivo_path)
+                                <a href="{{ route('documentos.archivo', $d) }}" target="_blank" class="inline-flex items-center gap-1 text-primary hover:underline" title="Ver archivo">
                                     <x-icon name="eye" class="w-4 h-4" /> Ver
                                 </a>
+                                @if ($d->upload_status === 'pendiente')
+                                    <div class="mt-1 flex items-center gap-1.5">
+                                        <span class="inline-flex items-center rounded bg-warning-tint text-warning px-1.5 py-0.5 text-[10px] font-semibold uppercase" title="{{ $d->upload_error }}">Pendiente SharePoint</span>
+                                        @can('documentos.editar')
+                                            <button wire:click="reintentarSubida({{ $d->id }})" class="text-[11px] text-primary hover:underline">Reintentar</button>
+                                        @endcan
+                                    </div>
+                                @endif
                             @else
                                 <span class="text-faint">—</span>
                             @endif

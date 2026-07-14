@@ -13,6 +13,7 @@ class Documento extends Model
     protected $fillable = [
         'empleado_id', 'tipo_documento_id', 'fecha_emision', 'fecha_vencimiento',
         'archivo_path', 'archivo_nombre', 'observacion',
+        'storage_driver', 'sharepoint_item_id', 'sharepoint_web_url', 'upload_status', 'upload_error',
     ];
 
     protected $casts = [
