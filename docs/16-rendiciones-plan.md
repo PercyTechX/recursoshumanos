@@ -1,9 +1,10 @@
 # 16 · Módulo Rendiciones (caja chica) — Plan de diseño
 
-> **Estado:** PLANIFICACIÓN. El usuario irá pasando contexto (cómo genera la
-> documentación/PDF, reglas, etc.). No construir hasta cerrar el plan.
-> Fuente original: `docs/ADAPTACION_PHP_LARAGON.md` (sistema Node+React+Google
-> que se porta). Aquí adaptamos ese sistema como **módulo** de recursoshumanos.
+> **Estado:** PLAN CERRADO ✅. **Fase A construida** (datos/modelos/estados/permisos, 2026-07-14).
+> En curso: Fase B (panel supervisor, mockup aprobado). Único nice-to-have: muestra real del
+> PDF para afinar la Hoja Resumen (logos ya definidos).
+> Fuente original: `docs/ADAPTACION_PHP_LARAGON.md` (sistema Node+React+Google que se porta).
+> Aquí lo adaptamos como **módulo** de recursoshumanos (sin Google; con MySQL + SharePoint).
 
 ---
 
@@ -83,8 +84,17 @@ Ligadas a `empleados`/`users` en vez de tablas de personas propias:
   ],
   ```
   y resolver/cachear el drive-id por nombre. Documentos seguiría igual (destino "documentos").
-- **Auth del técnico:** ruta pública por **token** (sin login), estilo `rendir/{token}`
-  (patrón parecido al de `_setup/{token}`). El supervisor usa el login normal.
+- **Acceso del técnico:** DOS vías, ambas apuntan al mismo depósito (por `empleado_id`):
+  1. **Link único por token** (sin login), ruta pública `rendir/{token}` (patrón `_setup/{token}`).
+     Universal y sin fricción; sirve para cualquier técnico, tenga usuario o no.
+  2. **Pestaña "Rendiciones" en "Mi espacio"** (portal): para los técnicos que **sí** tienen
+     usuario. Y sí tienen, porque para **marcar asistencia GPS** y **tomar/avanzar tickets**
+     ya se loguean en el portal (verificado: `portal/index` exige `auth()->user()->empleado`).
+  - **Continuidad garantizada:** como el depósito se guarda contra `empleado_id` (no contra el
+    usuario), si un técnico rinde **sin** usuario (por link) y luego se le **crea el usuario**
+    (módulo Usuarios enlaza `empleados.user_id`), su **historial de rendiciones aparece solo**
+    en "Mi espacio" — igual que hereda asistencia/tickets/documentos. Nada que migrar.
+  - El **supervisor** usa el login normal de la app.
 - **Roles/permisos:** nuevos permisos `rendiciones.*` (ver/crear/aprobar/ampliar/anular)
   en `config/permisos.php` + asignación por rol.
 - **PDF:** servicio `ResumenRendicionPdf` con dompdf; contenido según `ADAPTACION...` §7.
@@ -128,14 +138,17 @@ si quieren **logo de GDS** en la Hoja Resumen.
 
 ---
 
-## 7. Plan por fases (borrador, se ajusta al cerrar §6)
+## 7. Plan por fases
 
-- **Fase A — Datos y estados:** migraciones + modelos + máquina de estados + permisos.
-- **Fase B — Panel supervisor (Livewire):** registrar depósito, listar por estado,
-  aprobar/rechazar/anular/ampliar, enlace WhatsApp.
-- **Fase C — Vista técnico (token):** subir comprobantes, liquidar (Exacto/Devolución/Reembolso).
+- **Fase A — Datos y estados:** ✅ HECHA (migraciones + modelos + máquina de estados + permisos).
+- **Fase B — Panel supervisor (Livewire):** registrar depósito, KPIs, listar por estado
+  (pestañas), aprobar/rechazar/anular/ampliar, enlace WhatsApp. *(mockup aprobado)*
+- **Fase C — Acceso del técnico:** (1) vista pública por token `rendir/{token}` y (2) pestaña
+  "Rendiciones" en el portal "Mi espacio". Subir comprobantes + liquidar (Exacto/Devolución/
+  Reembolso). Ambas vían por `empleado_id`.
 - **Fase D — SharePoint multi-destino:** vouchers/comprobantes → CONTABILIDAD/Rend_Sistemas.
-- **Fase E — PDF Hoja Resumen** (al aprobar) + tests de los flujos críticos (§15 del doc).
+- **Fase E — PDF Hoja Resumen** (al aprobar; logos GDS/PercyTech) + tests de los flujos
+  críticos (§15 de ADAPTACION_PHP_LARAGON.md).
 
 ---
 
