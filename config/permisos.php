@@ -48,6 +48,10 @@ return [
         'label' => 'Asistencia (control)',
         'acciones' => ['ver' => 'Ver', 'registrar' => 'Registrar manual', 'editar' => 'Editar/corregir'],
     ],
+    'rendiciones' => [
+        'label' => 'Rendiciones (caja chica)',
+        'acciones' => ['ver' => 'Ver', 'registrar' => 'Registrar depósito', 'aprobar' => 'Aprobar / Rechazar', 'ampliar' => 'Ampliar monto', 'anular' => 'Anular'],
+    ],
     'usuarios' => [
         'label' => 'Usuarios',
         'acciones' => ['ver' => 'Ver', 'crear' => 'Crear', 'editar' => 'Editar', 'eliminar' => 'Eliminar'],
