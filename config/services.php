@@ -44,6 +44,8 @@ return [
         'site_host' => env('GRAPH_SITE_HOST'),      // ej. gdsinfraestructura.sharepoint.com
         'site_path' => env('GRAPH_SITE_PATH'),      // ej. /sites/GDSINFRAESTRUCTURASAC
         'drive_name' => env('GRAPH_DRIVE_NAME'),    // nombre de la biblioteca, ej. RRHH
+        // Carpeta raíz donde la app guarda TODO (para no ensuciar las carpetas manuales).
+        'base_folder' => env('GRAPH_BASE_FOLDER', 'Doc_Sistemas'),
     ],
 
 ];

@@ -29,6 +29,7 @@ class DocumentosSharePointTest extends TestCase
         config()->set('services.graph', [
             'tenant_id' => 'tenant', 'client_id' => 'client', 'client_secret' => 'secret',
             'site_host' => 'test.sharepoint.com', 'site_path' => '/sites/RRHH', 'drive_name' => 'RRHH',
+            'base_folder' => 'Doc_Sistemas',
         ]);
     }
 
@@ -75,6 +76,10 @@ class DocumentosSharePointTest extends TestCase
         $this->assertSame('https://sp/rrhh/item', $doc->sharepoint_web_url);
         $this->assertSame('subido', $doc->upload_status);
         $this->assertNull($doc->archivo_path); // el temporal local se borró
+
+        // La subida cae bajo la carpeta raíz de la app + subcarpeta del empleado.
+        Http::assertSent(fn ($req) => str_contains(rawurldecode($req->url()), 'root:/Doc_Sistemas/12345678 - Díaz Ana/')
+            && str_ends_with(rawurldecode(explode('?', $req->url())[0]), ':/content'));
     }
 
     public function test_si_sharepoint_falla_el_documento_queda_pendiente(): void

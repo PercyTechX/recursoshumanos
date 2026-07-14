@@ -165,13 +165,12 @@ new class extends Component {
         }
     }
 
-    /** Carpeta destino en la biblioteca: Expedientes/{DNI - Apellidos Nombres}. */
+    /** Subcarpeta del empleado dentro de la carpeta raíz de la app: {DNI - Apellidos Nombres}. */
     private function carpetaEmpleado(?int $empleadoId): string
     {
         $emp = Empleado::find($empleadoId);
-        $etiqueta = trim(($emp?->numero_documento ?? 's-d').' - '.($emp?->apellidos ?? '').' '.($emp?->nombres ?? ''));
 
-        return 'Expedientes/'.$etiqueta;
+        return trim(($emp?->numero_documento ?? 's-d').' - '.($emp?->apellidos ?? '').' '.($emp?->nombres ?? ''));
     }
 
     private function mensajeGuardado(array $payload): string

@@ -69,7 +69,7 @@ class SharePointDocs
     public function subirContenido(string $contenido, string $mime, string $carpeta, string $nombre): array
     {
         $driveId = $this->driveId();
-        $ruta = $this->rutaCodificada($carpeta, $this->sanitizar($nombre));
+        $ruta = $this->rutaCodificada($this->conBase($carpeta), $this->sanitizar($nombre));
 
         $resp = $this->graph->http()
             ->withBody($contenido, $mime)
@@ -112,6 +112,15 @@ class SharePointDocs
     {
         $driveId = $this->driveId();
         $this->graph->http()->delete("/drives/{$driveId}/items/{$itemId}");
+    }
+
+    /** Antepone la carpeta raíz configurada (base_folder) para no ensuciar las carpetas manuales. */
+    private function conBase(string $carpeta): string
+    {
+        $base = trim((string) config('services.graph.base_folder'), '/');
+        $carpeta = trim($carpeta, '/');
+
+        return $base === '' ? $carpeta : $base.'/'.$carpeta;
     }
 
     /** Sanitiza el nombre para SharePoint (caracteres prohibidos y espacios extremos). */
