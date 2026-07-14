@@ -35,4 +35,15 @@ return [
         ],
     ],
 
+    // Microsoft Graph (app-only / client credentials) para documentos en SharePoint.
+    // Ver docs/15-integracion-sharepoint-graph.md. Credenciales sensibles → .env, no commitear.
+    'graph' => [
+        'tenant_id' => env('GRAPH_TENANT_ID'),
+        'client_id' => env('GRAPH_CLIENT_ID'),
+        'client_secret' => env('GRAPH_CLIENT_SECRET'),
+        'site_host' => env('GRAPH_SITE_HOST'),      // ej. gdsinfraestructura.sharepoint.com
+        'site_path' => env('GRAPH_SITE_PATH'),      // ej. /sites/GDSINFRAESTRUCTURASAC
+        'drive_name' => env('GRAPH_DRIVE_NAME'),    // nombre de la biblioteca, ej. RRHH
+    ],
+
 ];
