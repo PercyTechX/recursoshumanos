@@ -28,6 +28,12 @@ Rendición de **caja chica** entregada a técnicos de campo:
 2. **Archivos:** SharePoint, biblioteca **CONTABILIDAD**, carpeta raíz **`Rend_Sistemas`**
    (separada de `Doc_Sistemas` de RRHH). El permiso a nivel de sitio ya cubre CONTABILIDAD.
 3. **Momento:** planear ahora; construir después (el usuario aporta el contexto faltante).
+4. **Sin Google:** NO se usa Google Drive ni Google Sheets. Todo con el stack actual
+   (Laravel + MySQL) + SharePoint (OneDrive) para archivos.
+5. **Histórico:** arrancar **limpio** (sin migración). El sistema Google viejo queda como
+   consulta aparte si hiciera falta.
+6. **Técnico:** siempre empleado (FK). **Supervisor:** usuario logueado (sin campo). **Ticket:**
+   FK obligatorio al módulo tickets. **Local:** automático del ticket (cliente + sucursal/sede).
 
 ---
 
@@ -92,15 +98,31 @@ Ligadas a `empleados`/`users` en vez de tablas de personas propias:
 
 1. **PDF / "cómo genera la documentación":** el usuario enviará el detalle real (muestra
    o layout) para replicar la Hoja Resumen con exactitud. ¿El §7 del doc es fiel al actual?
-2. **Ticket:** ¿el depósito enlaza a un **ticket existente** del módulo tickets (FK) o es
-   un **número/texto libre**? (afecta el formulario y la BD)
-3. **Local:** ¿enlaza a **cliente/sucursal/sede** existente (FK) o es texto libre?
-4. **Técnicos:** ¿siempre son **empleados registrados**? ¿o a veces terceros no-empleados?
-5. **Supervisores:** ¿= usuarios con rol **Supervisor**? ¿varios supervisores?
-6. **Datos de negocio:** ¿la Hoja Resumen sigue diciendo **PercyTech / RUC 10463288271 /
-   cuentas Interbank-BCP / WhatsApp +51 966...**, o cambian para **GDS Infraestructura**?
-7. **Migración de datos** existentes del sistema Google (Sheets/Drive): ¿hay histórico que
-   migrar, o arranca limpio?
+   UI de referencia recibida: panel supervisor + pantalla técnico (capturas 2026-07-14).
+   Sistema en vivo de referencia: https://rendicionesgoogle-app.onrender.com/rendir/{token}
+2. **Ticket:** RESUELTO → **enlazar siempre** (FK al ticket del módulo tickets; obligatorio).
+3. **Local:** RESUELTO → **automático del ticket** (se muestra cliente + sucursal/sede del
+   ticket elegido; se guarda snapshot para el histórico). No hay campo Local aparte.
+4. **Técnicos:** RESUELTO → **siempre empleado registrado** (FK `empleado_id`; usa su celular/DNI).
+5. **Supervisores:** RESUELTO → **usuario logueado** (`supervisor_id = auth()->id()`; sin campo).
+6. **Datos de negocio:** RESUELTO →
+   - **Empresa dueña de la caja (encabezado PDF):** GDS INFRAESTRUCTURA SAC · RUC **20551555187**.
+   - **Pie "Elaborado por":** PercyTech - Solutions · RUC **10463288271** · WhatsApp soporte **966804286**.
+   - **Cuentas de devolución (empresa):** Interbank **169-30010821-43** · BCP **191-98435080-71**
+     (+ nota "si te lo depositó tu supervisor, coordina con él").
+   - Logo: (pendiente si quieren logo de GDS en el PDF).
+7. **Migración de datos:** RESUELTO → **arranca limpio**, sin Google (ni Drive ni Sheets).
+
+**Solo queda "nice to have" (no bloquea construir):** muestra real del PDF para afinarlo, y
+si quieren **logo de GDS** en la Hoja Resumen.
+
+### Ajustes al formulario "Registrar Depósito" (según lo decidido)
+- **Técnico Beneficiario:** select de empleados (muestra su celular/DNI). Sin alta rápida
+  (los empleados se gestionan en su módulo).
+- **Supervisor:** desaparece del formulario (= usuario logueado).
+- **Nº Ticket:** select de tickets (idealmente filtrado a los del técnico elegido).
+- **Local:** solo lectura, se autocompleta del ticket (cliente + sucursal/sede).
+- **Monto, Fecha, Voucher:** igual (voucher → SharePoint CONTABILIDAD/Rend_Sistemas).
 
 ---
 
