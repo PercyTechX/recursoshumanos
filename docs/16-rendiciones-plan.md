@@ -110,7 +110,9 @@ Ligadas a `empleados`/`users` en vez de tablas de personas propias:
    - **Pie "Elaborado por":** PercyTech - Solutions · RUC **10463288271** · WhatsApp soporte **966804286**.
    - **Cuentas de devolución (empresa):** Interbank **169-30010821-43** · BCP **191-98435080-71**
      (+ nota "si te lo depositó tu supervisor, coordina con él").
-   - Logo: (pendiente si quieren logo de GDS en el PDF).
+   - **Logos:** SÍ. GDS en el **encabezado**, PercyTech en el **pie**. Archivos van en
+     `public/images/rendiciones/logo-gds.png` y `logo-percytech.png` (el usuario los deja ahí;
+     idealmente PNG con fondo transparente).
 7. **Migración de datos:** RESUELTO → **arranca limpio**, sin Google (ni Drive ni Sheets).
 
 **Solo queda "nice to have" (no bloquea construir):** muestra real del PDF para afinarlo, y
