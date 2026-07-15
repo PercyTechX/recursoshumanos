@@ -149,7 +149,10 @@ si quieren **logo de GDS** en la Hoja Resumen.
   agregar/eliminar comprobantes, liquidar (Exacto/Devolución exige voucher/Reembolso). Al
   aprobar un reembolso el supervisor adjunta el voucher. `config/rendiciones.php` con datos de
   empresa/cuentas. Archivos local (SharePoint = Fase D).
-- **Fase D — SharePoint multi-destino:** vouchers/comprobantes → CONTABILIDAD/Rend_Sistemas.
+- **Fase D — SharePoint multi-destino:** ✅ HECHA. SharePointDocs con `graph.destinos`
+  (documentos→RRHH/Doc_Sistemas, rendiciones→CONTABILIDAD/Rend_Sistemas). Servicio
+  `RendicionArchivos` (guardar-temporal-y-reintentar) enganchado en los 6 puntos de subida;
+  carpeta `{ticket} - {técnico}`. Comando `rendiciones:subir-pendientes`. Verificado real.
 - **Fase E — PDF Hoja Resumen** (al aprobar; logos GDS/PercyTech) + tests de los flujos
   críticos (§15 de ADAPTACION_PHP_LARAGON.md).
 
