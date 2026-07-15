@@ -1,8 +1,8 @@
 # 16 · Módulo Rendiciones (caja chica) — Plan de diseño
 
-> **Estado:** PLAN CERRADO ✅. **Fase A construida** (datos/modelos/estados/permisos, 2026-07-14).
-> En curso: Fase B (panel supervisor, mockup aprobado). Único nice-to-have: muestra real del
-> PDF para afinar la Hoja Resumen (logos ya definidos).
+> **Estado (2026-07-15):** Fases **A, B, C, D construidas** ✅ (datos, panel supervisor, vista
+> técnico, SharePoint). **Falta solo la Fase E (PDF Hoja Resumen)** — spec detallada en §8 —
+> y el **despliegue a producción** (§9). 143 tests verdes.
 > Fuente original: `docs/ADAPTACION_PHP_LARAGON.md` (sistema Node+React+Google que se porta).
 > Aquí lo adaptamos como **módulo** de recursoshumanos (sin Google; con MySQL + SharePoint).
 
@@ -158,4 +158,58 @@ si quieren **logo de GDS** en la Hoja Resumen.
 
 ---
 
-*Este plan se irá completando con el contexto que aporte el usuario.*
+---
+
+## 8. PENDIENTE — Fase E: Hoja Resumen PDF (retomar aquí mañana)
+
+**Objetivo:** al **aprobar** un depósito (estado → Finalizado), generar la **Hoja Resumen PDF**
+y subirla a SharePoint (destino `rendiciones`, carpeta del depósito, nombre
+`Resumen_Rendicion_{ticket}.pdf`), guardando `resumen_item_id/web_url/status` en el depósito.
+
+### Piezas a construir
+1. **Vista PDF** `resources/views/pdf/rendicion-resumen.blade.php` (dompdf, ya instalado —
+   `barryvdh/laravel-dompdf`, se usa en Hoja de Ruta). Contenido EXACTO (docs/ADAPTACION §7):
+   - **Encabezado:** logo GDS (`public/images/rendiciones/logo-gds.png`) + título
+     "Hoja Resumen de Rendición" + empresa `config('rendiciones.empresa')` (GDS, RUC 20551555187).
+   - **Datos:** fecha emisión = `fecha_aprobado`; Ticket, Técnico, Local, Supervisor.
+   - **Depósitos:** depósito inicial (`monto_inicial`) con fecha `dia`; cada ampliación
+     (monto, fecha, motivo); **Total entregado** = `monto`.
+   - **Rendición (comprobantes):** cada gasto `{tipo} {nro} · S/ {monto} · {fecha}`;
+     **Total gastado** = suma.
+   - **Vuelto/Reembolso** según `liquidacion.estado_liquidacion`:
+     Devolución → "Vuelto devuelto por el técnico: S/ {abs(dif)}"; Reembolso → "Reembolso al
+     técnico: S/ {abs(dif)}"; Exacto → "Balance exacto".
+   - **VB°:** Técnico (`fecha_rendido`) · Supervisor (`fecha_aprobado`).
+   - **Pie:** logo PercyTech (`logo-percytech.png`) + "Elaborado por PercyTech - Solutions ·
+     RUC 10463288271 · Soporte WhatsApp 966804286" (todo de `config('rendiciones.elaborado_por')`).
+   - Estilo: A4, títulos azules, moneda `S/ #,##0.00`.
+2. **Generación al aprobar** (en `rendiciones/tabla.blade.php` método `aprobar()`, DESPUÉS de
+   finalizar): render dompdf → guardar temporal local en `resumen_path` (`resumen_status='pendiente'`)
+   → `app(RendicionArchivos::class)->subir($dep, 'resumen', $dep->carpetaSharePoint())`.
+   **Envolver en try/catch**: si el PDF falla, NO revertir la aprobación (solo loguear).
+3. **Ver el PDF:** en Detalles / fila de Finalizados, enlace a `resumen_web_url` (o ruta stream).
+4. **Tests:** aprobar genera el PDF (sin red: queda `resumen_path` local `pendiente` + archivo
+   existe); con `Http::fake` sube y queda `resumen_status='subido'`.
+
+### Requisito del usuario para la Fase E
+- Dejar los **logos** en `public/images/rendiciones/`: `logo-gds.png` y `logo-percytech.png`
+  (idealmente PNG transparente). Si no están, generar el PDF con texto y agregarlos luego.
+- (Opcional) muestra real del PDF de su sistema para calcar el layout.
+
+---
+
+## 9. Pendientes GENERALES del proyecto (fuera de Fase E)
+
+- **Desplegar a producción** todo lo acumulado (documentos→SharePoint, reportes/Excel de
+  asistencia, filtros, y el módulo Rendiciones completo). Incluye:
+  - Poner en el `.env` de PROD: `GRAPH_TENANT_ID/CLIENT_ID/CLIENT_SECRET/SITE_HOST/SITE_PATH/
+    DRIVE_NAME/BASE_FOLDER` + `GRAPH_DRIVE_RENDICIONES=CONTABILIDAD` + `GRAPH_FOLDER_RENDICIONES=Rend_Sistemas`.
+  - Correr las **migraciones** nuevas (sharepoint en documentos + 4 de rendiciones) vía `/_setup`.
+  - `php artisan graph:ping` desde el hosting (confirmar salida HTTPS).
+  - Rehacer el flujo de re-clonar (docs/09).
+- (Opcional) **cron** en cPanel para `rendiciones:subir-pendientes` (reintento de archivos).
+- Recordatorio de seguridad: el **client secret de Graph vence 13/07/2028** (renovar antes).
+
+---
+
+*Estado: A/B/C/D hechas. Falta Fase E (PDF) + despliegue a producción.*
