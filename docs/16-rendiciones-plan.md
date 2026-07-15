@@ -144,9 +144,11 @@ si quieren **logo de GDS** en la Hoja Resumen.
 - **Fase B — Panel supervisor (Livewire):** ✅ HECHA. Ruta `/rendiciones`, KPIs, registrar
   depósito (ticket→local automático), pestañas, buscador, filtro por técnico, acciones
   Aprobar/Rechazar/Anular/Ampliar + Link/WhatsApp/Detalles. Voucher local (SharePoint = Fase D).
-- **Fase C — Acceso del técnico:** (1) vista pública por token `rendir/{token}` y (2) pestaña
-  "Rendiciones" en el portal "Mi espacio". Subir comprobantes + liquidar (Exacto/Devolución/
-  Reembolso). Ambas vían por `empleado_id`.
+- **Fase C — Acceso del técnico:** ✅ HECHA. (1) Página pública `/rendir/{token}` (sin login,
+  branding GDS) y (2) pestaña "Mis rendiciones" en el portal. Componente `rendiciones.rendir`:
+  agregar/eliminar comprobantes, liquidar (Exacto/Devolución exige voucher/Reembolso). Al
+  aprobar un reembolso el supervisor adjunta el voucher. `config/rendiciones.php` con datos de
+  empresa/cuentas. Archivos local (SharePoint = Fase D).
 - **Fase D — SharePoint multi-destino:** vouchers/comprobantes → CONTABILIDAD/Rend_Sistemas.
 - **Fase E — PDF Hoja Resumen** (al aprobar; logos GDS/PercyTech) + tests de los flujos
   críticos (§15 de ADAPTACION_PHP_LARAGON.md).
