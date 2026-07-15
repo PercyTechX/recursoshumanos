@@ -141,8 +141,9 @@ si quieren **logo de GDS** en la Hoja Resumen.
 ## 7. Plan por fases
 
 - **Fase A — Datos y estados:** ✅ HECHA (migraciones + modelos + máquina de estados + permisos).
-- **Fase B — Panel supervisor (Livewire):** registrar depósito, KPIs, listar por estado
-  (pestañas), aprobar/rechazar/anular/ampliar, enlace WhatsApp. *(mockup aprobado)*
+- **Fase B — Panel supervisor (Livewire):** ✅ HECHA. Ruta `/rendiciones`, KPIs, registrar
+  depósito (ticket→local automático), pestañas, buscador, filtro por técnico, acciones
+  Aprobar/Rechazar/Anular/Ampliar + Link/WhatsApp/Detalles. Voucher local (SharePoint = Fase D).
 - **Fase C — Acceso del técnico:** (1) vista pública por token `rendir/{token}` y (2) pestaña
   "Rendiciones" en el portal "Mi espacio". Subir comprobantes + liquidar (Exacto/Devolución/
   Reembolso). Ambas vían por `empleado_id`.
