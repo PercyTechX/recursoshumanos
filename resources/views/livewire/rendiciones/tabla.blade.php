@@ -4,6 +4,7 @@ use App\Models\Empleado;
 use App\Models\RendicionAmpliacion;
 use App\Models\RendicionDeposito;
 use App\Models\Ticket;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
 use Livewire\WithFileUploads;
@@ -37,6 +38,7 @@ new class extends Component {
 
     // Detalle
     public ?int $detalleId = null;
+    public $detalleVoucher = null;
 
     public function mount(): void
     {
@@ -219,11 +221,37 @@ new class extends Component {
     public function verDetalle(int $id): void
     {
         $this->detalleId = $id;
+        $this->reset('detalleVoucher');
+        $this->resetErrorBag();
     }
 
     public function cerrarDetalle(): void
     {
         $this->detalleId = null;
+    }
+
+    /** Agrega o reemplaza el voucher del depósito después de registrado. */
+    public function guardarVoucherDeposito(): void
+    {
+        abort_unless(auth()->user()->can('rendiciones.registrar'), 403);
+        $dep = RendicionDeposito::findOrFail($this->detalleId);
+        abort_unless(in_array($dep->estado, [RendicionDeposito::RINDIENDO, RendicionDeposito::POR_REVISAR, RendicionDeposito::OBSERVADO], true), 403);
+
+        $this->validate(
+            ['detalleVoucher' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120']],
+            [], ['detalleVoucher' => 'voucher']
+        );
+
+        if ($dep->voucher_path) {
+            Storage::disk('public')->delete($dep->voucher_path);
+        }
+        $dep->voucher_nombre = $this->detalleVoucher->getClientOriginalName();
+        $dep->voucher_path = $this->detalleVoucher->store('rendiciones/vouchers', 'public');
+        $dep->voucher_status = 'pendiente';
+        $dep->save();
+
+        $this->reset('detalleVoucher');
+        session()->flash('ok', 'Voucher del depósito guardado.');
     }
 
     public function with(): array
@@ -536,6 +564,28 @@ new class extends Component {
                         <div><span class="text-faint text-xs">Local</span><div class="text-ink">{{ $detalle->local_nombre }}</div></div>
                         <div><span class="text-faint text-xs">Depósito inicial</span><div class="text-ink tabular-nums">{{ $money($detalle->monto_inicial) }}</div></div>
                         <div><span class="text-faint text-xs">Total entregado</span><div class="text-ink font-semibold tabular-nums">{{ $money($detalle->monto) }}</div></div>
+                    </div>
+
+                    {{-- Voucher del depósito (se puede agregar/reemplazar después de registrado) --}}
+                    <div class="rounded-lg border border-line p-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs uppercase tracking-wide text-faint">Voucher del depósito</span>
+                            @if ($detalle->voucher_path)
+                                <a href="{{ Storage::url($detalle->voucher_path) }}" target="_blank" class="text-primary text-xs font-semibold">Ver · {{ $detalle->voucher_nombre }}</a>
+                            @else
+                                <span class="text-faint text-xs">Sin voucher</span>
+                            @endif
+                        </div>
+                        @can('rendiciones.registrar')
+                            @if (in_array($detalle->estado, ['Rindiendo', 'Por Revisar', 'Observado'], true))
+                                <div class="mt-2 flex items-end gap-2">
+                                    <input type="file" wire:model="detalleVoucher" class="w-full text-xs text-muted file:mr-2 file:rounded file:border-0 file:bg-canvas file:px-2 file:py-1 file:text-muted">
+                                    <button wire:click="guardarVoucherDeposito" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-xs font-semibold px-3 py-1.5 whitespace-nowrap">{{ $detalle->voucher_path ? 'Reemplazar' : 'Agregar' }}</button>
+                                </div>
+                                <div wire:loading wire:target="detalleVoucher" class="text-xs text-faint mt-1">Subiendo…</div>
+                                @error('detalleVoucher') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                            @endif
+                        @endcan
                     </div>
 
                     @if ($detalle->ampliaciones->count())

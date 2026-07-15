@@ -110,6 +110,25 @@ class RendicionPanelTest extends TestCase
         Storage::disk('public')->assertExists($d->voucher_path);
     }
 
+    public function test_agrega_voucher_del_deposito_despues_de_registrado(): void
+    {
+        $this->supervisor();
+        $d = $this->deposito(RendicionDeposito::RINDIENDO); // sin voucher
+        $this->assertNull($d->voucher_path);
+        Storage::fake('public');
+
+        Volt::test('rendiciones.tabla')
+            ->call('verDetalle', $d->id)
+            ->set('detalleVoucher', UploadedFile::fake()->create('voucher.pdf', 120, 'application/pdf'))
+            ->call('guardarVoucherDeposito')
+            ->assertHasNoErrors();
+
+        $d->refresh();
+        $this->assertNotNull($d->voucher_path);
+        $this->assertSame('pendiente', $d->voucher_status);
+        Storage::disk('public')->assertExists($d->voucher_path);
+    }
+
     public function test_aprobar_finaliza(): void
     {
         $this->supervisor();
