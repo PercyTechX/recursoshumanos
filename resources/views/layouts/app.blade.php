@@ -102,6 +102,12 @@
                             <x-icon name="chart" class="w-5 h-5 shrink-0" /> Reportes asistencia
                         </a>
                     @endcan
+                    @can('rendiciones.ver')
+                        <a href="{{ route('rendiciones.index') }}" wire:navigate
+                           class="{{ $itemBase }} {{ request()->routeIs('rendiciones.*') ? $itemOn : $itemOff }}">
+                            <x-icon name="receipt" class="w-5 h-5 shrink-0" /> Rendiciones
+                        </a>
+                    @endcan
                     @can('clientes.ver')
                         <a href="{{ route('clientes.index') }}" wire:navigate
                            class="{{ $itemBase }} {{ request()->routeIs('clientes.*') || request()->routeIs('sedes.*') ? $itemOn : $itemOff }}">

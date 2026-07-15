@@ -63,6 +63,10 @@ Route::middleware('auth')->group(function () {
         Route::view('reportes-asistencia', 'asistencia.reporte')->name('asistencia.reporte');
     });
 
+    Route::middleware('role_or_permission:SuperAdmin|rendiciones.ver')->group(function () {
+        Route::view('rendiciones', 'rendiciones.index')->name('rendiciones.index');
+    });
+
     Route::middleware('role_or_permission:SuperAdmin|empleados.ver')->group(function () {
         Route::view('empleados', 'empleados.index')->name('empleados.index');
         Route::get('empleados/exportar', [EmpleadoController::class, 'exportar'])->name('empleados.exportar');
