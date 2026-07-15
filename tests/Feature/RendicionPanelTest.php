@@ -88,6 +88,28 @@ class RendicionPanelTest extends TestCase
         $this->assertSame('987654321', $d->tecnico_celular);                  // snapshot
     }
 
+    public function test_registra_deposito_con_voucher(): void
+    {
+        $this->supervisor();
+        $emp = $this->empleado();
+        $ticket = $this->ticket();
+        Storage::fake('public');
+
+        Volt::test('rendiciones.tabla')
+            ->set('empleado_id', $emp->id)
+            ->set('ticket_id', $ticket->id)
+            ->set('monto', '100')
+            ->set('dia', '2026-07-15')
+            ->set('voucher', UploadedFile::fake()->create('voucher.pdf', 120, 'application/pdf'))
+            ->call('registrar')
+            ->assertHasNoErrors();
+
+        $d = RendicionDeposito::first();
+        $this->assertNotNull($d->voucher_path);
+        $this->assertSame('pendiente', $d->voucher_status);   // Fase D lo subirá a SharePoint
+        Storage::disk('public')->assertExists($d->voucher_path);
+    }
+
     public function test_aprobar_finaliza(): void
     {
         $this->supervisor();

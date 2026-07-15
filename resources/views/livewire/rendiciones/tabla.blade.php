@@ -90,10 +90,9 @@ new class extends Component {
         ]);
 
         if ($this->voucher) {
-            // Fase B: se guarda local; la subida a SharePoint es la Fase D.
+            // Fase B: se guarda local; la subida a SharePoint es la Fase D (voucher_status='pendiente').
             $dep->voucher_nombre = $this->voucher->getClientOriginalName();
             $dep->voucher_path = $this->voucher->store('rendiciones/vouchers', 'public');
-            $dep->storage_driver = 'local';
             $dep->voucher_status = 'pendiente';
         }
 
