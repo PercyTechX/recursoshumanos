@@ -12,6 +12,8 @@ use App\Models\User;
 use Database\Seeders\CatalogoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Volt\Volt;
 use Spatie\Permission\PermissionRegistrar;
@@ -127,6 +129,43 @@ class RendicionPanelTest extends TestCase
         $this->assertNotNull($d->voucher_path);
         $this->assertSame('pendiente', $d->voucher_status);
         Storage::disk('public')->assertExists($d->voucher_path);
+    }
+
+    public function test_voucher_se_sube_a_sharepoint_contabilidad(): void
+    {
+        $this->supervisor();
+        $emp = $this->empleado();
+        $ticket = $this->ticket();
+
+        config()->set('services.graph', [
+            'tenant_id' => 't', 'client_id' => 'c', 'client_secret' => 's',
+            'site_host' => 'h.sharepoint.com', 'site_path' => '/sites/X',
+            'drive_name' => 'RRHH', 'base_folder' => 'Doc_Sistemas',
+            'destinos' => ['rendiciones' => ['drive' => 'CONTABILIDAD', 'folder' => 'Rend_Sistemas']],
+        ]);
+        Cache::flush();
+        Http::fake([
+            'login.microsoftonline.com/*' => Http::response(['access_token' => 'tok', 'expires_in' => 3600]),
+            'graph.microsoft.com/v1.0/sites/*/drives' => Http::response(['value' => [['id' => 'drv', 'name' => 'CONTABILIDAD']]]),
+            'graph.microsoft.com/v1.0/sites/*' => Http::response(['id' => 'site']),
+            'graph.microsoft.com/v1.0/drives/*' => Http::response(['id' => 'itm', 'webUrl' => 'https://sp/rend/x', 'name' => 'voucher.pdf']),
+        ]);
+        Storage::fake('public');
+
+        Volt::test('rendiciones.tabla')
+            ->set('empleado_id', $emp->id)->set('ticket_id', $ticket->id)
+            ->set('monto', '100')->set('dia', '2026-07-15')
+            ->set('voucher', UploadedFile::fake()->create('voucher.pdf', 120, 'application/pdf'))
+            ->call('registrar')
+            ->assertHasNoErrors();
+
+        $d = RendicionDeposito::first();
+        $this->assertSame('subido', $d->voucher_status);
+        $this->assertSame('itm', $d->voucher_item_id);
+        $this->assertSame('https://sp/rend/x', $d->voucher_web_url);
+        $this->assertNull($d->voucher_path); // el temporal local se borró
+
+        Http::assertSent(fn ($r) => str_contains(rawurldecode($r->url()), 'root:/Rend_Sistemas/TA-9875654 - Serrano, Clever/'));
     }
 
     public function test_aprobar_finaliza(): void

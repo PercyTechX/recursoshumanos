@@ -3,6 +3,7 @@
 use App\Models\RendicionDeposito;
 use App\Models\RendicionGasto;
 use App\Models\RendicionLiquidacion;
+use App\Services\SharePoint\RendicionArchivos;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Locked;
@@ -62,6 +63,8 @@ new class extends Component {
         $g->archivo_status = 'pendiente';
         $g->save();
 
+        app(RendicionArchivos::class)->subir($g, 'archivo', $dep->carpetaSharePoint());
+
         $this->reset(['c_nro', 'c_monto', 'c_archivo']);
         $this->c_tipo = 'Boleta';
         $this->c_fecha = now()->toDateString();
@@ -106,6 +109,7 @@ new class extends Component {
             $liq->comprobante_path = $this->voucherDevolucion->store('rendiciones/liquidacion', 'public');
             $liq->comprobante_status = 'pendiente';
             $liq->save();
+            app(RendicionArchivos::class)->subir($liq, 'comprobante', $dep->carpetaSharePoint());
         }
 
         $dep->transicionar('liquidar');

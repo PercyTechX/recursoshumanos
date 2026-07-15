@@ -95,6 +95,12 @@ class RendicionDeposito extends Model
         return bin2hex(random_bytes(16));
     }
 
+    /** Carpeta del depósito dentro de la biblioteca de SharePoint: "{ticket} - {técnico}". */
+    public function carpetaSharePoint(): string
+    {
+        return trim(($this->ticket?->ticket_atencion ?? 'SIN-TICKET').' - '.$this->tecnico_nombre);
+    }
+
     // ---- Derivados ----
 
     /** Monto del depósito inicial = total - suma de ampliaciones. */

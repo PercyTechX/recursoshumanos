@@ -32,5 +32,10 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- Nunca tocar SharePoint real en tests: sin tenant, el adaptador es no-op.
+             Los tests que prueban la subida fijan config()+Http::fake explícitamente. -->
+        <env name="GRAPH_TENANT_ID" value=""/>
+        <env name="GRAPH_CLIENT_ID" value=""/>
+        <env name="GRAPH_CLIENT_SECRET" value=""/>
     </php>
 </phpunit>

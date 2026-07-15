@@ -4,6 +4,7 @@ use App\Models\Empleado;
 use App\Models\RendicionAmpliacion;
 use App\Models\RendicionDeposito;
 use App\Models\Ticket;
+use App\Services\SharePoint\RendicionArchivos;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
@@ -100,6 +101,10 @@ new class extends Component {
 
         $dep->save();
 
+        if ($this->voucher) {
+            app(RendicionArchivos::class)->subir($dep, 'voucher', $dep->carpetaSharePoint());
+        }
+
         $this->reset(['empleado_id', 'ticket_id', 'monto', 'voucher']);
         $this->dia = now()->toDateString();
         session()->flash('ok', 'Depósito registrado. Comparte el enlace con el técnico por WhatsApp.');
@@ -149,6 +154,7 @@ new class extends Component {
             $liq->comprobante_path = $this->reembolsoVoucher->store('rendiciones/liquidacion', 'public');
             $liq->comprobante_status = 'pendiente';
             $liq->save();
+            app(RendicionArchivos::class)->subir($liq, 'comprobante', $dep->carpetaSharePoint());
         }
 
         $dep->transicionar('aprobar');
@@ -207,6 +213,10 @@ new class extends Component {
         }
         $amp->save();
 
+        if ($this->ampVoucher) {
+            app(RendicionArchivos::class)->subir($amp, 'voucher', $dep->carpetaSharePoint());
+        }
+
         $dep->increment('monto', (float) $this->ampMonto);
         $this->cerrarAccion('Depósito adicional registrado. Nuevo total: S/ '.number_format($dep->fresh()->monto, 2).'.');
     }
@@ -249,6 +259,8 @@ new class extends Component {
         $dep->voucher_path = $this->detalleVoucher->store('rendiciones/vouchers', 'public');
         $dep->voucher_status = 'pendiente';
         $dep->save();
+
+        app(RendicionArchivos::class)->subir($dep, 'voucher', $dep->carpetaSharePoint());
 
         $this->reset('detalleVoucher');
         session()->flash('ok', 'Voucher del depósito guardado.');
@@ -570,8 +582,10 @@ new class extends Component {
                     <div class="rounded-lg border border-line p-3">
                         <div class="flex items-center justify-between">
                             <span class="text-xs uppercase tracking-wide text-faint">Voucher del depósito</span>
-                            @if ($detalle->voucher_path)
-                                <a href="{{ Storage::url($detalle->voucher_path) }}" target="_blank" class="text-primary text-xs font-semibold">Ver · {{ $detalle->voucher_nombre }}</a>
+                            @if ($detalle->voucher_web_url)
+                                <a href="{{ $detalle->voucher_web_url }}" target="_blank" class="text-primary text-xs font-semibold">Ver en SharePoint · {{ $detalle->voucher_nombre }}</a>
+                            @elseif ($detalle->voucher_path)
+                                <a href="{{ Storage::url($detalle->voucher_path) }}" target="_blank" class="text-primary text-xs font-semibold">Ver · {{ $detalle->voucher_nombre }} <span class="text-warning">(pendiente)</span></a>
                             @else
                                 <span class="text-faint text-xs">Sin voucher</span>
                             @endif

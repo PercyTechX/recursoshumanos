@@ -43,9 +43,14 @@ return [
         'client_secret' => env('GRAPH_CLIENT_SECRET'),
         'site_host' => env('GRAPH_SITE_HOST'),      // ej. gdsinfraestructura.sharepoint.com
         'site_path' => env('GRAPH_SITE_PATH'),      // ej. /sites/GDSINFRAESTRUCTURASAC
-        'drive_name' => env('GRAPH_DRIVE_NAME'),    // nombre de la biblioteca, ej. RRHH
+        'drive_name' => env('GRAPH_DRIVE_NAME'),    // biblioteca por defecto (legado / destino "documentos")
         // Carpeta raíz donde la app guarda TODO (para no ensuciar las carpetas manuales).
         'base_folder' => env('GRAPH_BASE_FOLDER', 'Doc_Sistemas'),
+        // Destinos por módulo: biblioteca (drive) + carpeta raíz. Ver docs/16.
+        'destinos' => [
+            'documentos' => ['drive' => env('GRAPH_DRIVE_NAME', 'RRHH'), 'folder' => env('GRAPH_BASE_FOLDER', 'Doc_Sistemas')],
+            'rendiciones' => ['drive' => env('GRAPH_DRIVE_RENDICIONES', 'CONTABILIDAD'), 'folder' => env('GRAPH_FOLDER_RENDICIONES', 'Rend_Sistemas')],
+        ],
     ],
 
 ];
