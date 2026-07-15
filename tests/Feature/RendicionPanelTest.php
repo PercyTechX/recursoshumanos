@@ -5,11 +5,14 @@ namespace Tests\Feature;
 use App\Models\Cliente;
 use App\Models\Empleado;
 use App\Models\RendicionDeposito;
+use App\Models\RendicionLiquidacion;
 use App\Models\Sucursal;
 use App\Models\Ticket;
 use App\Models\User;
 use Database\Seeders\CatalogoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Volt\Volt;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
@@ -126,6 +129,34 @@ class RendicionPanelTest extends TestCase
             ->assertHasErrors(['motivo']);
 
         $this->assertSame('Rindiendo', $d->fresh()->estado); // no cambió
+    }
+
+    public function test_aprobar_reembolso_exige_voucher(): void
+    {
+        $this->supervisor();
+        $d = $this->deposito(RendicionDeposito::POR_REVISAR);
+        RendicionLiquidacion::create([
+            'deposito_id' => $d->id, 'monto_depositado' => 200, 'total_gastado' => 250,
+            'diferencia' => -50, 'estado_liquidacion' => 'Reembolso',
+        ]);
+        Storage::fake('public');
+
+        // Sin voucher: falla y no finaliza
+        Volt::test('rendiciones.tabla')
+            ->call('abrirAccion', 'aprobar', $d->id)
+            ->call('confirmarAccion')
+            ->assertHasErrors(['reembolsoVoucher']);
+        $this->assertSame('Por Revisar', $d->fresh()->estado);
+
+        // Con voucher: finaliza y guarda el comprobante del reembolso
+        Volt::test('rendiciones.tabla')
+            ->call('abrirAccion', 'aprobar', $d->id)
+            ->set('reembolsoVoucher', UploadedFile::fake()->create('reembolso.jpg', 80, 'image/jpeg'))
+            ->call('confirmarAccion')
+            ->assertHasNoErrors();
+
+        $this->assertSame('Finalizado', $d->fresh()->estado);
+        $this->assertNotNull($d->fresh()->liquidacion->comprobante_path);
     }
 
     public function test_ampliar_incrementa_el_monto(): void

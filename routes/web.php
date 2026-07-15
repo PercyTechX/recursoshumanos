@@ -8,6 +8,14 @@ use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome');
 
+// Rendición del técnico por enlace único (sin login). Ver docs/16.
+Route::get('rendir/{token}', function (string $token) {
+    $deposito = \App\Models\RendicionDeposito::where('token', $token)->first();
+    abort_if(! $deposito, 404, 'Depósito no encontrado o el enlace es inválido.');
+
+    return view('rendiciones.publico', compact('deposito'));
+})->name('rendir');
+
 // Tablero: RRHH/Gerencia ven KPIs; el trabajador (solo su portal) va a "Mi espacio".
 Route::get('dashboard', function () {
     $u = auth()->user();

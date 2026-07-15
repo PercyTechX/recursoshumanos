@@ -33,6 +33,7 @@ new class extends Component {
     public string $ampMonto = '';
     public string $ampFecha = '';
     public $ampVoucher = null;
+    public $reembolsoVoucher = null;
 
     // Detalle
     public ?int $detalleId = null;
@@ -113,7 +114,7 @@ new class extends Component {
     {
         $this->accion = $accion;
         $this->accionId = $id;
-        $this->reset(['motivo', 'ampMonto', 'ampVoucher']);
+        $this->reset(['motivo', 'ampMonto', 'ampVoucher', 'reembolsoVoucher']);
         $this->ampFecha = now()->toDateString();
         $this->resetErrorBag();
         $this->mostrarAccion = true;
@@ -135,6 +136,20 @@ new class extends Component {
     private function aprobar(RendicionDeposito $dep): void
     {
         abort_unless(auth()->user()->can('rendiciones.aprobar'), 403);
+
+        // Si la liquidación es Reembolso, el supervisor debe adjuntar el voucher del reembolso.
+        $liq = $dep->liquidacion;
+        if ($liq && $liq->estado_liquidacion === RendicionDeposito::LIQ_REEMBOLSO) {
+            $this->validate(
+                ['reembolsoVoucher' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120']],
+                [], ['reembolsoVoucher' => 'voucher de reembolso']
+            );
+            $liq->comprobante_nombre = $this->reembolsoVoucher->getClientOriginalName();
+            $liq->comprobante_path = $this->reembolsoVoucher->store('rendiciones/liquidacion', 'public');
+            $liq->comprobante_status = 'pendiente';
+            $liq->save();
+        }
+
         $dep->transicionar('aprobar');
         $dep->fecha_aprobado = now()->toDateString();
         $dep->save();
@@ -242,6 +257,9 @@ new class extends Component {
             ],
             'detalle' => $this->detalleId
                 ? RendicionDeposito::with(['empleado', 'ticket.cliente', 'gastos', 'liquidacion', 'ampliaciones'])->find($this->detalleId)
+                : null,
+            'accionDep' => ($this->mostrarAccion && $this->accion === 'aprobar' && $this->accionId)
+                ? RendicionDeposito::with('liquidacion')->find($this->accionId)
                 : null,
         ];
     }
@@ -449,7 +467,19 @@ new class extends Component {
                 </div>
                 <form wire:submit="confirmarAccion" class="px-6 py-5 space-y-4">
                     @if ($accion === 'aprobar')
-                        <p class="text-sm text-muted">Se marcará como <strong>Finalizado</strong>. (La Hoja Resumen PDF se generará en la Fase E.)</p>
+                        @if ($accionDep?->liquidacion?->estado_liquidacion === 'Reembolso')
+                            <div class="rounded-lg bg-danger-tint/50 text-ink px-3 py-2 text-sm">
+                                Esta rendición es un <strong>reembolso</strong> de S/ {{ number_format(abs($accionDep->liquidacion->diferencia), 2) }} al técnico. Adjunta el voucher del reembolso.
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-muted mb-1">Voucher del reembolso *</label>
+                                <input type="file" wire:model="reembolsoVoucher" class="w-full text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-canvas file:px-3 file:py-2 file:text-muted">
+                                <div wire:loading wire:target="reembolsoVoucher" class="text-xs text-faint mt-1">Subiendo…</div>
+                                @error('reembolsoVoucher') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                            </div>
+                        @else
+                            <p class="text-sm text-muted">Se marcará como <strong>Finalizado</strong>. (La Hoja Resumen PDF se generará en la Fase E.)</p>
+                        @endif
                     @elseif (in_array($accion, ['rechazar', 'anular']))
                         <div>
                             <label class="block text-sm font-medium text-muted mb-1">Motivo *</label>

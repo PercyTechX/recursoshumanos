@@ -4,6 +4,7 @@ use App\Models\Ausencia;
 use App\Models\Documento;
 use App\Models\Marcacion;
 use App\Models\MovimientoVacaciones;
+use App\Models\RendicionDeposito;
 use App\Models\SolicitudVacaciones;
 use App\Models\Ticket;
 use App\Models\TicketAvance;
@@ -210,6 +211,7 @@ new class extends Component {
             'saldoVac' => $empleado->saldo_vacaciones,
             'ausencias' => Ausencia::where('empleado_id', $this->empleadoId)->orderByDesc('fecha_inicio')->get(),
             'diasCalc' => SolicitudVacaciones::calcularDias($this->fecha_inicio, $this->fecha_fin),
+            'rendiciones' => RendicionDeposito::where('empleado_id', $this->empleadoId)->with('ticket')->orderByDesc('id')->get(),
         ];
     }
 }; ?>
@@ -245,6 +247,9 @@ new class extends Component {
             <button @click="tab='documentos'" :class="tab==='documentos' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Mis documentos ({{ $documentos->count() }})</button>
             <button @click="tab='vacaciones'" :class="tab==='vacaciones' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Mis vacaciones</button>
             <button @click="tab='ausencias'" :class="tab==='ausencias' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Mis ausencias ({{ $ausencias->count() }})</button>
+            @if ($rendiciones->count())
+                <button @click="tab='rendiciones'" :class="tab==='rendiciones' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Mis rendiciones ({{ $rendiciones->count() }})</button>
+            @endif
         </div>
 
         {{-- ASISTENCIA --}}
@@ -587,6 +592,32 @@ new class extends Component {
                 </tbody>
             </table>
         </section>
+
+        {{-- MIS RENDICIONES --}}
+        @if ($rendiciones->count())
+            <section x-show="tab==='rendiciones'" x-cloak class="space-y-3">
+                @php
+                    $badgeR = [
+                        'Rindiendo' => 'bg-primary-tint text-primary', 'Por Revisar' => 'bg-warning-tint text-warning',
+                        'Finalizado' => 'bg-success-tint text-success', 'Observado' => 'bg-danger-tint text-danger',
+                        'Anulado' => 'bg-canvas text-faint',
+                    ];
+                @endphp
+                @foreach ($rendiciones as $r)
+                    <div class="bg-surface border border-line rounded-xl p-4 flex flex-wrap items-center gap-3">
+                        <div class="min-w-0 flex-1">
+                            <div class="font-medium text-ink">Ticket {{ $r->ticket?->ticket_atencion }} · <span class="tabular-nums">S/ {{ number_format($r->monto, 2) }}</span></div>
+                            <div class="text-xs text-faint">{{ $r->local_nombre }} · {{ $r->dia?->format('d/m/Y') }}</div>
+                        </div>
+                        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $badgeR[$r->estado] ?? '' }}"><span class="w-2 h-2 rounded-full bg-current"></span>{{ $r->estado }}</span>
+                        <a href="{{ route('rendir', $r->token) }}" target="_blank"
+                           class="rounded-lg text-sm font-semibold px-4 py-2 {{ $r->editable_por_tecnico ? 'bg-primary hover:bg-primary-dark text-white' : 'border border-line text-muted hover:bg-canvas' }}">
+                            {{ $r->editable_por_tecnico ? 'Rendir' : 'Ver' }}
+                        </a>
+                    </div>
+                @endforeach
+            </section>
+        @endif
 
         {{-- Modal solicitar vacaciones --}}
         @if ($mostrarForm)
