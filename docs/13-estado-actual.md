@@ -1,44 +1,81 @@
 # Estado actual del proyecto
 
-> Actualizado: 2026-07-10. Resumen consolidado de lo construido, su estado de
-> despliegue y lo pendiente. **98 tests en verde.**
+> Actualizado: **2026-07-16**. Resumen consolidado de lo construido, su estado de
+> despliegue y lo pendiente. **156 tests en verde.**
 
 ## Módulos construidos
 
 | Módulo | Qué hace | Doc | Estado |
 |---|---|---|---|
-| **Núcleo / Auth / Roles** | Login, roles (spatie), sedes/áreas/cargos | 02 | ✅ en producción |
-| **Empleados + Ficha** | Ficha legal completa, sueldo por rol, cese | 07 | ✅ en producción |
-| **Derechohabientes** | Cónyuge/hijos con documentos (pestaña Familia) | 07 | ✅ en producción |
-| **Documentos + semáforo** | Vigencias, semáforo, historial, export | 02 | ✅ en producción |
-| **Documentos compartidos** | SCTR colectivo: 1 archivo → muchas personas | 08 | ✅ en producción |
-| **Activos / EPP** | Inventario, asignar/devolver con firma, trazabilidad | 06 | ✅ en producción |
-| **Hoja de ruta / Descuentos** | Liquidación firmada → descuentos → Contador → PDF | 06 | ✅ en producción |
-| **Vacaciones** | Solicitudes + saldo tipo ledger | 10 | ✅ en producción |
-| **Vacaciones: retorno anticipado** | Interrupción reintegra días al saldo | 10 | 🟡 local (feature/usuarios) |
-| **Aviso al supervisor (WhatsApp)** | Genera mensaje, el usuario elige contacto | 11 | 🟡 local |
-| **Íconos SVG** | Sin emojis; íconos en menú y acciones | — | 🟡 local |
-| **Ausencias** | Descanso médico (CITT), licencias, permisos, faltas | 10 | 🟡 local |
-| **Usuarios y Super Admin** | CRUD, reset clave, activar, vincular empleado | 11 | 🟡 local |
-| **Roles y accesos (matriz)** | Permisos por módulo × acción, configurable | 11 | 🟡 local |
-| **Portal del trabajador** | Autoservicio: mis datos/documentos/vacaciones/ausencias | 12 | 🟡 local |
-| **Clientes / Sucursales / Sedes** | Catálogos con geocerca + ubigeos (listas dependientes) | 14 | 🟡 local (feature/asistencia) |
-| **Tickets (órdenes de trabajo)** | Supervisor crea/cierra; cliente + ubicación | 14 | 🟡 local |
-| **Asistencia (marcación GPS)** | Ingreso/salida con GPS en "Mi espacio" | 14 | 🟡 local |
-| **Operación de tickets** | Estados + geocerca + abortar misión | 14 | 🟡 local |
+| **Núcleo / Auth / Roles / Usuarios** | Login, roles+permisos configurables (matriz), usuarios | 02, 11 | ✅ producción |
+| **Empleados + Ficha + Expediente** | Ficha legal completa, expediente con pestañas, derechohabientes | 07 | ✅ producción |
+| **Documentos + semáforo** | Vigencias, semáforo, historial, export, avisos WhatsApp | 02 | ✅ producción |
+| **Documentos → SharePoint** | Suben a `RRHH/Doc_Sistemas/{persona}` vía Graph app-only | 15 | ✅ producción |
+| **Documentos compartidos** | SCTR colectivo: 1 archivo → muchas personas | 08 | ✅ producción (archivo aún local) |
+| **Activos / EPP / Hoja de ruta / Descuentos** | Inventario, entregas con firma, liquidación, PDF | 06 | ✅ producción (archivos aún locales) |
+| **Vacaciones (+ devengo al vuelo, retorno anticipado)** | Solicitudes, saldo ledger, 2.5/mes prorrateado | 10 | ✅ producción |
+| **Ausencias** | Descansos médicos, licencias, permisos, faltas | 10 | ✅ producción |
+| **Clientes / Sucursales / Sedes** | Catálogos con geocerca + ubigeos | 14 | ✅ producción |
+| **Tickets (órdenes de trabajo)** | Crear/cerrar, cliente + ubicación (geocerca) | 14 | ✅ producción |
+| **Asistencia GPS + control + reportes** | Marcación GPS, control supervisor, reportes General/Detallado, export Excel con GPS y links a Maps, filtro fechas | 14 | ✅ producción |
+| **Portal "Mi espacio"** | Asistencia, tickets, datos, documentos, boletas, vacaciones, ausencias, rendiciones | 12 | ✅ producción |
+| **RENDICIONES (caja chica)** | Depósitos→técnico por link/portal→liquida→aprueba→**Hoja Resumen PDF**; archivos a `CONTABILIDAD/Rend_Sistemas/{ticket - técnico}` | 16 | ✅ producción |
+| **Boletas de pago (MVP)** | RRHH sube PDF por periodo; trabajador ve y **confirma recepción**; a SharePoint `{persona}/Boletas` | — | ✅ producción |
+| **DNI y CV al registrar / desde expediente** | Adjuntos iniciales + "Subir documento" en expediente; tipo DNI con vigencia; servicio ArchivoDocumento compartido | — | 🟡 **local (pendiente re-deploy)** |
 
 ## Estado de despliegue
 
-- **En producción (`rrhh.gds.pe`)** está lo marcado ✅: hasta el módulo de
-  Vacaciones (base). Ver [09-deploy-cpanel.md](09-deploy-cpanel.md).
-- **Pendiente de subir (🟡):** todo lo construido después está en la rama
-  **`feature/asistencia`** (que incluye `feature/usuarios`), **validado en local**.
-  Para publicar a producción: fusionar a `main` → push → *Update from Remote* en
-  cPanel → `/_setup/{token}` (hay muchas migraciones nuevas: retorno, ausencias,
-  avisos, users.activo, permisos, clientes, sucursales, ubigeos, tickets,
-  marcaciones, ticket_tecnico/avances).
-- **Respaldo en GitHub:** las ramas de features se pushean a GitHub como respaldo
-  (no despliegan solas; producción solo se actualiza con el flujo de arriba).
+- **Producción `rrhh.gds.pe`** (re-clonado 2026-07-16): TODO hasta boletas + rendiciones,
+  con **SharePoint operativo** (graph:ping verde desde el hosting).
+- La ruta **`/_setup/{token}`** ahora hace todo en una visita: migraciones + seeders +
+  symlink storage + graph:ping.
+- 🟡 **Pendiente de subir:** commit `cdda1a8` (DNI/CV al registrar + expediente + fix "Ver"
+  del expediente). Próximo re-clonado lo incluye; el seeder crea el tipo "DNI" solo.
+
+## PENDIENTES (ordenados por prioridad)
+
+### 1. Re-deploy a producción 🟡
+Subir `cdda1a8+` (DNI/CV). Flujo re-clonar (docs/09) + `/_setup/{token}` con token nuevo.
+
+### 2. Cierre del deploy de hoy (confirmar en prod)
+- [ ] Vaciar `APP_SETUP_TOKEN` en el `.env` de prod (verificar que `/_setup/...` dé 404).
+- [ ] **Roles y accesos**: asignar `rendiciones.*` (Supervisor…) y `boletas.*` (RRHH…) —
+      el seeder no pisa roles que ya tienen permisos.
+- [ ] Prueba de humo: rendición con voucher → ver en `CONTABILIDAD/Rend_Sistemas`;
+      boleta → `Doc_Sistemas/{persona}/Boletas`; link del técnico en incógnito.
+
+### 3. Cron en cPanel (opcional, recomendado)
+`php artisan rendiciones:subir-pendientes` (reintenta archivos si Microsoft falló).
+Ruta típica: `cd /home/oipfutlf/repositories/recursoshumanos && /usr/local/bin/ea-php82 artisan rendiciones:subir-pendientes`.
+
+### 4. SharePoint Fase 2 — módulos que aún guardan archivos LOCAL
+Documentos compartidos, ausencias (CITT), derechohabientes, activos/EPP (firmas),
+Hoja de Ruta PDF. El adaptador ya es reusable (`ArchivoDocumento` / `RendicionArchivos`).
+
+### 5. SharePoint Fase 3 — migrar históricos
+Script una vez: documentos ya guardados en el servidor → SharePoint.
+
+### 6. Portal del trabajador — mejoras detectadas (análisis 2026-07-16)
+- **Mis datos**: autoservicio para proponer cambios (tel/dirección/correo) con aprobación RRHH.
+- Pestañas faltantes: **Mis descuentos**, **Mis activos/EPP** (lo asignado a su cargo).
+- Vacaciones: ver **kardex** de movimientos del saldo.
+- **Notificaciones** (correo/WhatsApp) al aprobar/rechazar vacaciones → requiere SMTP.
+
+### 7. Go-live / plataforma
+- **SMTP** (olvidé mi contraseña + avisos).
+- Vaciar **datos de prueba** en prod antes del uso real.
+- **Backups sin SSH** (exportar .sql/.zip desde la app para SuperAdmin).
+- **Tardanzas** (requiere definir horarios/turnos).
+- Excel nativo .xlsx (hoy .xls SpreadsheetML, funciona bien) — opcional.
+
+### 8. Futuro (scope Perú, docs/memoria)
+Planilla completa (cálculo de boletas, conceptos remunerativos), exportadores
+SUNAT (PLAME/T-Registro), RENIEC DNI autocomplete, SSOMA, IA Fase 2 (extracción de
+vencimientos de documentos escaneados).
+
+### 9. Recordatorios de seguridad 🔒
+- **Client secret de Graph vence 13/07/2028** → renovar antes en Entra ID.
+- Revocar el **GitHub PAT** usado para clonar en cPanel si sigue activo.
 
 ## Cómo se prueba en local
 
@@ -46,21 +83,5 @@
 - **admin@rrhh.test / password** — Super Admin (ve y hace todo).
 - **tecnico@empresa.test / password** — trabajador (portal "Mi espacio").
 
-## Arquitectura de accesos (resumen)
-
-- **Roles** + **permisos** `<modulo>.<accion>` (config/permisos.php).
-- Menú y rutas por permiso (`@can` / `role_or_permission`); acciones protegidas en
-  cada pantalla (`abort_unless`). **SuperAdmin** pasa siempre (Gate::before).
-- Configurable desde **"Roles y accesos"** (sin tocar código).
-
-## Pendientes / próximos
-
-- **Asistencia** con geocerca — siguiente módulo (ver [14-asistencia.md](14-asistencia.md)).
-- **Boletas de pago** (requiere módulo de Planilla).
-- **OneDrive/Graph** para archivos (requiere registro de app en Azure por el usuario).
-- **Excel real (.xlsx)** (hoy CSV).
-- Correo SMTP (para "olvidé mi contraseña" y otros avisos).
-- Exportadores SUNAT (PLAME / T-Registro) y bancos.
-- SSOMA (capacitaciones, IPERC, incidentes).
-- Devengo automático de vacaciones (Cron).
-- Backups sin SSH (exportar .sql / .zip en PHP puro para Super Admin).
+⚠️ El `.env` local tiene credenciales **reales** de Graph: subir archivos en local
+escribe en el SharePoint real (Doc_Sistemas / Rend_Sistemas).
