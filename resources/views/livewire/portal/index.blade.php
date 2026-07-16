@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Ausencia;
+use App\Models\BoletaPago;
 use App\Models\Documento;
 use App\Models\Marcacion;
 use App\Models\MovimientoVacaciones;
@@ -174,6 +175,17 @@ new class extends Component {
     }
 
     /** El trabajador solo puede cancelar SUS solicitudes aún pendientes. */
+    /** El trabajador confirma la recepción de SU boleta (valor probatorio). */
+    public function confirmarRecepcionBoleta(int $id): void
+    {
+        abort_if($this->empleadoId === null, 403);
+        $b = BoletaPago::where('empleado_id', $this->empleadoId)->findOrFail($id);
+        if (! $b->recibida_at) {
+            $b->update(['recibida_at' => now()]);
+            session()->flash('ok', 'Recepción de la boleta confirmada. ¡Gracias!');
+        }
+    }
+
     public function cancelar(int $id): void
     {
         $s = SolicitudVacaciones::where('empleado_id', $this->empleadoId)->findOrFail($id);
@@ -212,6 +224,7 @@ new class extends Component {
             'ausencias' => Ausencia::where('empleado_id', $this->empleadoId)->orderByDesc('fecha_inicio')->get(),
             'diasCalc' => SolicitudVacaciones::calcularDias($this->fecha_inicio, $this->fecha_fin),
             'rendiciones' => RendicionDeposito::where('empleado_id', $this->empleadoId)->with('ticket')->orderByDesc('id')->get(),
+            'boletas' => BoletaPago::where('empleado_id', $this->empleadoId)->orderByDesc('periodo')->orderBy('tipo')->get(),
         ];
     }
 }; ?>
@@ -245,6 +258,7 @@ new class extends Component {
             <button @click="tab='tickets'" :class="tab==='tickets' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Tickets @if ($ticketActivo)<span class="ml-1 inline-flex items-center rounded-full bg-primary-tint text-primary px-1.5 text-[10px] font-bold">1</span>@endif</button>
             <button @click="tab='datos'" :class="tab==='datos' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Mis datos</button>
             <button @click="tab='documentos'" :class="tab==='documentos' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Mis documentos ({{ $documentos->count() }})</button>
+            <button @click="tab='boletas'" :class="tab==='boletas' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Mis boletas ({{ $boletas->count() }}) @if ($boletas->whereNull('recibida_at')->count())<span class="ml-1 inline-flex items-center rounded-full bg-warning-tint text-warning px-1.5 text-[10px] font-bold">{{ $boletas->whereNull('recibida_at')->count() }}</span>@endif</button>
             <button @click="tab='vacaciones'" :class="tab==='vacaciones' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Mis vacaciones</button>
             <button @click="tab='ausencias'" :class="tab==='ausencias' ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'" class="{{ $tabBtn }}">Mis ausencias ({{ $ausencias->count() }})</button>
             @if ($rendiciones->count())
@@ -503,13 +517,51 @@ new class extends Component {
                                 <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $c }}"><span class="w-2 h-2 rounded-full bg-current"></span>{{ $t }}</span>
                             </td>
                             <td class="px-4 py-3">
-                                @if ($d->archivo_path)
-                                    <a href="{{ Storage::url($d->archivo_path) }}" target="_blank" class="text-primary hover:underline">Ver</a>
+                                @if ($d->sharepoint_item_id || $d->archivo_path)
+                                    <a href="{{ route('portal.documento', $d) }}" target="_blank" class="text-primary hover:underline">Ver</a>
                                 @else <span class="text-faint">—</span> @endif
                             </td>
                         </tr>
                     @empty
                         <tr><td colspan="4" class="px-4 py-8 text-center text-faint">No tienes documentos registrados.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </section>
+
+        {{-- MIS BOLETAS DE PAGO --}}
+        <section x-show="tab==='boletas'" x-cloak class="bg-surface border border-line rounded-xl overflow-x-auto">
+            <table class="w-full text-sm min-w-[560px]">
+                <thead>
+                    <tr class="text-left text-xs uppercase tracking-wide text-faint bg-canvas border-b border-line">
+                        <th class="px-4 py-3">Periodo</th>
+                        <th class="px-4 py-3">Tipo</th>
+                        <th class="px-4 py-3">Boleta</th>
+                        <th class="px-4 py-3">Recepción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($boletas as $b)
+                        <tr class="border-b border-line last:border-0">
+                            <td class="px-4 py-3 text-ink font-medium">{{ $b->periodo_label }}</td>
+                            <td class="px-4 py-3 text-muted">{{ $b->tipo }}</td>
+                            <td class="px-4 py-3">
+                                <a href="{{ route('portal.boleta', $b) }}" target="_blank" class="text-primary hover:underline">Ver PDF</a>
+                            </td>
+                            <td class="px-4 py-3">
+                                @if ($b->recibida_at)
+                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-success-tint text-success px-2.5 py-0.5 text-xs font-semibold">✓ Recibida el {{ $b->recibida_at->format('d/m/Y') }}</span>
+                                @else
+                                    <button wire:click="confirmarRecepcionBoleta({{ $b->id }})"
+                                            wire:confirm="¿Confirmas que recibiste esta boleta de pago?"
+                                            class="rounded-lg bg-primary hover:bg-primary-dark text-white text-xs font-semibold px-3 py-1.5">
+                                        Confirmar recepción
+                                    </button>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="4" class="px-4 py-8 text-center text-faint">Aún no tienes boletas de pago publicadas.</td></tr>
                     @endforelse
                 </tbody>
             </table>

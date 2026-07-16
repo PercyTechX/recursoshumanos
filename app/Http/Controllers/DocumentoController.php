@@ -14,11 +14,29 @@ class DocumentoController extends Controller
     /**
      * Sirve el archivo de un documento sin exponer la URL directa: si está en
      * SharePoint lo transmite vía Graph (app-only); si quedó local, lo sirve del disco.
+     * Para el personal de RRHH (permiso documentos.ver).
      */
     public function archivo(Documento $documento): Response
     {
         abort_unless(auth()->user()->can('documentos.ver'), 403);
 
+        return $this->servir($documento);
+    }
+
+    /**
+     * Igual que archivo(), pero para el PROPIO trabajador desde su portal:
+     * autoriza por pertenencia (el documento es suyo), no por permiso de módulo.
+     */
+    public function archivoPropio(Documento $documento): Response
+    {
+        $empleado = auth()->user()->empleado;
+        abort_unless($empleado && (int) $documento->empleado_id === (int) $empleado->id, 403);
+
+        return $this->servir($documento);
+    }
+
+    private function servir(Documento $documento): Response
+    {
         $nombre = $documento->archivo_nombre ?: 'documento';
 
         if ($documento->storage_driver === 'sharepoint' && $documento->sharepoint_item_id) {

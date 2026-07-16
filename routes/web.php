@@ -51,6 +51,26 @@ Route::view('mi-espacio', 'portal.index')
     ->middleware(['auth'])
     ->name('portal.index');
 
+// Archivo de un documento PROPIO (autoriza por pertenencia; sirve desde SharePoint o local)
+Route::get('mi-espacio/documentos/{documento}/archivo', [DocumentoController::class, 'archivoPropio'])
+    ->middleware(['auth'])
+    ->name('portal.documento');
+
+// Boleta de pago PROPIA (autoriza por pertenencia; sirve desde SharePoint o local)
+Route::get('mi-espacio/boletas/{boleta}/archivo', function (\App\Models\BoletaPago $boleta) {
+    $empleado = auth()->user()->empleado;
+    abort_unless($empleado && (int) $boleta->empleado_id === (int) $empleado->id, 403);
+
+    $contenido = ($boleta->archivo_status === 'subido' && $boleta->archivo_item_id)
+        ? app(\App\Services\SharePoint\SharePointDocs::class)->contenido($boleta->archivo_item_id, 'documentos')
+        : \Illuminate\Support\Facades\Storage::disk('public')->get($boleta->archivo_path ?? abort(404));
+
+    return response($contenido, 200, [
+        'Content-Type' => 'application/pdf',
+        'Content-Disposition' => 'inline; filename="'.addslashes($boleta->archivo_nombre ?: 'boleta.pdf').'"',
+    ]);
+})->middleware(['auth'])->name('portal.boleta');
+
 // Cerrar sesión (usado por el botón del sidebar)
 Route::post('logout', function (Logout $logout) {
     $logout();
@@ -103,6 +123,10 @@ Route::middleware('auth')->group(function () {
         Route::view('documentos', 'documentos.index')->name('documentos.index');
         Route::get('documentos/exportar', [DocumentoController::class, 'exportar'])->name('documentos.exportar');
         Route::get('documentos/{documento}/archivo', [DocumentoController::class, 'archivo'])->name('documentos.archivo');
+    });
+
+    Route::middleware('role_or_permission:SuperAdmin|boletas.ver')->group(function () {
+        Route::view('boletas', 'boletas.index')->name('boletas.index');
     });
 
     Route::middleware('role_or_permission:SuperAdmin|documentos_compartidos.ver')->group(function () {
