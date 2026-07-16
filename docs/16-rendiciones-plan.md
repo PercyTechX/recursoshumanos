@@ -1,8 +1,9 @@
 # 16 · Módulo Rendiciones (caja chica) — Plan de diseño
 
-> **Estado (2026-07-15):** Fases **A, B, C, D construidas** ✅ (datos, panel supervisor, vista
-> técnico, SharePoint). **Falta solo la Fase E (PDF Hoja Resumen)** — spec detallada en §8 —
-> y el **despliegue a producción** (§9). 143 tests verdes.
+> **Estado (2026-07-16): MÓDULO COMPLETO ✅ — Fases A, B, C, D y E construidas** (datos, panel
+> supervisor, vista técnico, SharePoint, PDF Hoja Resumen). 145 tests verdes. PDF verificado
+> visualmente contra la muestra real (85 KB con logos GDS/PercyTech).
+> **Pendiente únicamente: despliegue a producción** (§9).
 > Fuente original: `docs/ADAPTACION_PHP_LARAGON.md` (sistema Node+React+Google que se porta).
 > Aquí lo adaptamos como **módulo** de recursoshumanos (sin Google; con MySQL + SharePoint).
 
@@ -153,8 +154,11 @@ si quieren **logo de GDS** en la Hoja Resumen.
   (documentos→RRHH/Doc_Sistemas, rendiciones→CONTABILIDAD/Rend_Sistemas). Servicio
   `RendicionArchivos` (guardar-temporal-y-reintentar) enganchado en los 6 puntos de subida;
   carpeta `{ticket} - {técnico}`. Comando `rendiciones:subir-pendientes`. Verificado real.
-- **Fase E — PDF Hoja Resumen** (al aprobar; logos GDS/PercyTech) + tests de los flujos
-  críticos (§15 de ADAPTACION_PHP_LARAGON.md).
+- **Fase E — PDF Hoja Resumen:** ✅ HECHA. `ResumenPdfService` (dompdf + font subsetting,
+  ~85 KB) + template calcado de la muestra real, logos GDS (encabezado) y PercyTech (pie).
+  Se genera al aprobar (try/catch, no revierte), sube a SharePoint como
+  `Resumen_Rendicion_{ticket}.pdf`, ruta pública `/rendir/{token}/resumen` + enlaces en
+  panel/Detalles/vista técnico. Reintento incluido en `rendiciones:subir-pendientes`.
 
 ---
 
