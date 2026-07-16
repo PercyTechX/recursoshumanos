@@ -168,8 +168,32 @@ Route::get('_setup/{token}', function (string $token) {
     Artisan::call('db:seed', ['--class' => \Database\Seeders\UbigeoSeeder::class, '--force' => true]);
     $salida .= Artisan::output();
 
+    // Symlink public/storage (el re-clonado lo borra; sin SSH se crea aquí)
+    try {
+        if (! file_exists(public_path('storage'))) {
+            Artisan::call('storage:link');
+            $salida .= "\npublic/storage: symlink creado ✔\n";
+        } else {
+            $salida .= "\npublic/storage: ya existía ✔\n";
+        }
+    } catch (\Throwable $e) {
+        $salida .= "\npublic/storage: FALLÓ → ".$e->getMessage()."\n";
+    }
+
+    // Conectividad con SharePoint/Graph (docs/15 §8) — solo si hay credenciales
+    if (config('services.graph.tenant_id')) {
+        try {
+            Artisan::call('graph:ping');
+            $salida .= "\n".Artisan::output();
+        } catch (\Throwable $e) {
+            $salida .= "\ngraph:ping FALLÓ → ".$e->getMessage()."\n";
+        }
+    } else {
+        $salida .= "\ngraph:ping omitido (sin GRAPH_TENANT_ID en .env)\n";
+    }
+
     return response('<pre style="font:14px/1.5 monospace;padding:16px">'.e($salida)."\n\n".
-        'LISTO. Ahora vacía APP_SETUP_TOKEN en el .env y vuelve a desplegar.</pre>');
+        'LISTO. Ahora vacía APP_SETUP_TOKEN en el .env.</pre>');
 })->name('setup');
 
 require __DIR__.'/auth.php';
