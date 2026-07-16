@@ -4,7 +4,9 @@ use App\Models\Empleado;
 use App\Models\RendicionAmpliacion;
 use App\Models\RendicionDeposito;
 use App\Models\Ticket;
+use App\Services\Rendiciones\ResumenPdfService;
 use App\Services\SharePoint\RendicionArchivos;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
@@ -160,7 +162,18 @@ new class extends Component {
         $dep->transicionar('aprobar');
         $dep->fecha_aprobado = now()->toDateString();
         $dep->save();
-        // Hoja Resumen PDF: Fase E.
+
+        // Hoja Resumen PDF (si falla, NO se revierte la aprobación — solo se loguea).
+        try {
+            $pdf = app(ResumenPdfService::class)->generar($dep->fresh());
+            $path = 'rendiciones/resumen/'.$dep->id.'_'.now()->format('YmdHis').'.pdf';
+            Storage::disk('public')->put($path, $pdf);
+            $dep->forceFill(['resumen_path' => $path, 'resumen_status' => 'pendiente'])->save();
+            app(RendicionArchivos::class)->subir($dep, 'resumen', $dep->carpetaSharePoint(), ResumenPdfService::nombreArchivo($dep));
+        } catch (\Throwable $e) {
+            Log::warning('Rendiciones: fallo al generar la Hoja Resumen PDF. '.$e->getMessage());
+        }
+
         $this->cerrarAccion('Rendición aprobada.');
     }
 
@@ -456,6 +469,9 @@ new class extends Component {
                                         <a href="https://wa.me/{{ $tel }}?text={{ rawurlencode($msg) }}" target="_blank" class="{{ $chip }} text-[#1eaf5b]">WhatsApp</a>
                                     @endif
                                     <button wire:click="verDetalle({{ $d->id }})" class="{{ $chip }} text-muted">Detalles</button>
+                                    @if ($d->resumen_item_id || $d->resumen_path)
+                                        <a href="{{ route('rendir.resumen', $d->token) }}" target="_blank" class="{{ $chip }} text-danger">Hoja Resumen PDF</a>
+                                    @endif
                                     @can('rendiciones.aprobar')
                                         @if ($d->puede('aprobar'))
                                             <button wire:click="abrirAccion('aprobar', {{ $d->id }})" class="{{ $chip }} text-success">Aprobar</button>
@@ -629,6 +645,12 @@ new class extends Component {
 
                     @if ($detalle->observaciones)
                         <div class="rounded-lg bg-danger-tint text-danger px-3 py-2 text-xs"><strong>Observación:</strong> {{ $detalle->observaciones }}</div>
+                    @endif
+
+                    @if ($detalle->resumen_item_id || $detalle->resumen_path)
+                        <a href="{{ route('rendir.resumen', $detalle->token) }}" target="_blank" class="inline-flex items-center gap-1.5 rounded-lg border border-line text-danger text-sm font-semibold px-4 py-2 hover:bg-canvas">
+                            <x-icon name="document" class="w-4 h-4" /> Ver Hoja Resumen (PDF)
+                        </a>
                     @endif
                 </div>
                 <div class="px-6 py-4 border-t border-line flex justify-end">

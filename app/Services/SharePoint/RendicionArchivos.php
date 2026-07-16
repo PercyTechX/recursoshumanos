@@ -22,9 +22,10 @@ class RendicionArchivos
     /**
      * Sube el archivo local del modelo (columnas {prefijo}_*) a rendiciones/{subcarpeta}.
      * No-op si no hay Graph configurado, si ya está subido o si no hay archivo local.
-     * Devuelve true si quedó subido a SharePoint.
+     * $nombre permite fijar el nombre en SharePoint cuando el modelo no tiene
+     * columna {prefijo}_nombre (p.ej. el resumen PDF). Devuelve true si subió.
      */
-    public function subir(Model $m, string $prefijo, string $subcarpeta): bool
+    public function subir(Model $m, string $prefijo, string $subcarpeta, ?string $nombre = null): bool
     {
         if (empty(config('services.graph.tenant_id'))) {
             return false; // Graph no configurado (p.ej. en tests): se queda local/pendiente.
@@ -40,7 +41,7 @@ class RendicionArchivos
                 Storage::disk('public')->get($path),
                 Storage::disk('public')->mimeType($path) ?: 'application/octet-stream',
                 $subcarpeta,
-                $m->{$prefijo.'_nombre'} ?: 'archivo',
+                $nombre ?: ($m->{$prefijo.'_nombre'} ?: 'archivo'),
                 'rendiciones',
             );
 

@@ -6,6 +6,7 @@ use App\Models\RendicionAmpliacion;
 use App\Models\RendicionDeposito;
 use App\Models\RendicionGasto;
 use App\Models\RendicionLiquidacion;
+use App\Services\Rendiciones\ResumenPdfService;
 use App\Services\SharePoint\RendicionArchivos;
 use Illuminate\Console\Command;
 
@@ -42,6 +43,10 @@ class RendicionesSubirPendientes extends Command
         // Vouchers de ampliaciones
         foreach (RendicionAmpliacion::where('voucher_status', 'pendiente')->whereNotNull('voucher_path')->with('deposito.ticket')->get() as $amp) {
             $tick($amp->deposito ? $archivos->subir($amp, 'voucher', $amp->deposito->carpetaSharePoint()) : false);
+        }
+        // Hojas Resumen PDF
+        foreach (RendicionDeposito::where('resumen_status', 'pendiente')->whereNotNull('resumen_path')->with('ticket')->get() as $dep) {
+            $tick($archivos->subir($dep, 'resumen', $dep->carpetaSharePoint(), ResumenPdfService::nombreArchivo($dep)));
         }
 
         $this->info("Subidos: {$ok} · Pendientes/errores: {$fail}");

@@ -182,6 +182,11 @@ new class extends Component {
                     @case('Anulado') Este depósito fue anulado. @break
                 @endswitch
             </p>
+            @if ($dep->estado === 'Finalizado' && ($dep->resumen_item_id || $dep->resumen_path))
+                <a href="{{ route('rendir.resumen', $dep->token) }}" target="_blank" class="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
+                    Ver Hoja Resumen (PDF)
+                </a>
+            @endif
         </div>
     @endunless
 

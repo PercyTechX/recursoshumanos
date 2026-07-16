@@ -6,6 +6,7 @@ use App\Models\Cliente;
 use App\Models\Empleado;
 use App\Models\RendicionDeposito;
 use App\Models\RendicionLiquidacion;
+use App\Services\Rendiciones\ResumenPdfService;
 use App\Models\Sucursal;
 use App\Models\Ticket;
 use App\Models\User;
@@ -237,6 +238,47 @@ class RendicionPanelTest extends TestCase
 
         $this->assertSame('Finalizado', $d->fresh()->estado);
         $this->assertNotNull($d->fresh()->liquidacion->comprobante_path);
+    }
+
+    public function test_aprobar_genera_hoja_resumen_pdf(): void
+    {
+        $this->supervisor();
+        Storage::fake('public');
+        $d = $this->deposito(RendicionDeposito::POR_REVISAR);
+
+        Volt::test('rendiciones.tabla')
+            ->call('abrirAccion', 'aprobar', $d->id)
+            ->call('confirmarAccion')
+            ->assertHasNoErrors();
+
+        $d->refresh();
+        $this->assertSame('Finalizado', $d->estado);
+        $this->assertNotNull($d->resumen_path);
+        $this->assertSame('pendiente', $d->resumen_status); // sin Graph en tests, queda local
+        Storage::disk('public')->assertExists($d->resumen_path);
+        $this->assertStringStartsWith('%PDF', Storage::disk('public')->get($d->resumen_path));
+
+        // La ruta pública por token sirve el PDF
+        $this->get('/rendir/'.$d->token.'/resumen')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
+    }
+
+    public function test_fallo_del_pdf_no_revierte_la_aprobacion(): void
+    {
+        $this->supervisor();
+        $d = $this->deposito(RendicionDeposito::POR_REVISAR);
+        $this->mock(ResumenPdfService::class)
+            ->shouldReceive('generar')->andThrow(new \RuntimeException('dompdf explotó'));
+
+        Volt::test('rendiciones.tabla')
+            ->call('abrirAccion', 'aprobar', $d->id)
+            ->call('confirmarAccion')
+            ->assertHasNoErrors();
+
+        $d->refresh();
+        $this->assertSame('Finalizado', $d->estado);  // la aprobación se mantiene
+        $this->assertNull($d->resumen_path);
     }
 
     public function test_ampliar_incrementa_el_monto(): void

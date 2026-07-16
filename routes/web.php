@@ -16,6 +16,21 @@ Route::get('rendir/{token}', function (string $token) {
     return view('rendiciones.publico', compact('deposito'));
 })->name('rendir');
 
+// Hoja Resumen PDF del depósito (mismo acceso por token; desde SharePoint o local).
+Route::get('rendir/{token}/resumen', function (string $token) {
+    $dep = \App\Models\RendicionDeposito::where('token', $token)->firstOrFail();
+    abort_unless($dep->resumen_item_id || $dep->resumen_path, 404);
+
+    $contenido = $dep->resumen_item_id
+        ? app(\App\Services\SharePoint\SharePointDocs::class)->contenido($dep->resumen_item_id, 'rendiciones')
+        : \Illuminate\Support\Facades\Storage::disk('public')->get($dep->resumen_path);
+
+    return response($contenido, 200, [
+        'Content-Type' => 'application/pdf',
+        'Content-Disposition' => 'inline; filename="'.\App\Services\Rendiciones\ResumenPdfService::nombreArchivo($dep).'"',
+    ]);
+})->name('rendir.resumen');
+
 // Tablero: RRHH/Gerencia ven KPIs; el trabajador (solo su portal) va a "Mi espacio".
 Route::get('dashboard', function () {
     $u = auth()->user();
