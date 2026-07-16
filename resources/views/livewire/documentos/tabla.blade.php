@@ -94,32 +94,10 @@ new class extends Component {
         ];
 
         if ($this->archivo) {
-            // 1) Guardar temporal en el servidor para no perder el archivo si SharePoint falla.
-            $payload['archivo_nombre'] = $this->archivo->getClientOriginalName();
-            $payload['archivo_path'] = $this->archivo->store('documentos', 'public');
-            $payload['storage_driver'] = 'local';
-            $payload['upload_status'] = 'pendiente';
-            $payload['upload_error'] = null;
-
-            // 2) Intentar subir a SharePoint.
-            try {
-                $r = app(SharePointDocs::class)->subir(
-                    $this->archivo,
-                    $this->carpetaEmpleado($this->empleado_id),
-                    now()->format('Ymd_His').'_'.$this->archivo->getClientOriginalName(),
-                );
-                $payload['storage_driver'] = 'sharepoint';
-                $payload['sharepoint_item_id'] = $r['item_id'];
-                $payload['sharepoint_web_url'] = $r['web_url'];
-                $payload['upload_status'] = 'subido';
-                // 3) Ya está en SharePoint → borrar el temporal local.
-                Storage::disk('public')->delete($payload['archivo_path']);
-                $payload['archivo_path'] = null;
-            } catch (\Throwable $e) {
-                // Queda en el servidor con estado "pendiente" para reintentar. Nada se pierde.
-                $payload['upload_error'] = Str::limit($e->getMessage(), 240);
-                Log::warning('SharePoint: subida fallida, queda pendiente. '.$e->getMessage());
-            }
+            // Guarda temporal local + intento a SharePoint (servicio compartido con
+            // el registro de empleado y el expediente). Si falla, queda "pendiente".
+            $payload = array_merge($payload, app(\App\Services\Documentos\ArchivoDocumento::class)
+                ->payload($this->archivo, Empleado::findOrFail($this->empleado_id)));
         }
 
         Documento::updateOrCreate(['id' => $this->editandoId], $payload);

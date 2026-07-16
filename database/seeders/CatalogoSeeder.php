@@ -56,6 +56,7 @@ class CatalogoSeeder extends Seeder
         // Tipos de documento (con días de aviso previo al vencimiento).
         // compartible = un solo archivo ampara a varias personas (SCTR, homologación).
         $tipos = [
+            ['nombre' => 'DNI', 'dias_aviso_previo' => 30, 'requiere_vigencia' => true, 'compartible' => false],
             ['nombre' => 'SCTR Salud', 'dias_aviso_previo' => 30, 'requiere_vigencia' => true, 'compartible' => true],
             ['nombre' => 'SCTR Pensión', 'dias_aviso_previo' => 30, 'requiere_vigencia' => true, 'compartible' => true],
             ['nombre' => 'Antecedentes Penales', 'dias_aviso_previo' => 30, 'requiere_vigencia' => true, 'compartible' => false],

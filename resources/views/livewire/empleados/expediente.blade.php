@@ -9,7 +9,9 @@ use App\Models\EntregaEpp;
 use App\Models\HojaRuta;
 use App\Models\MovimientoVacaciones;
 use App\Models\SolicitudVacaciones;
+use App\Models\TipoDocumento;
 use App\Models\TipoEpp;
+use App\Services\Documentos\ArchivoDocumento;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Volt\Component;
 use Livewire\WithFileUploads;
@@ -18,6 +20,13 @@ new class extends Component {
     use WithFileUploads;
 
     public int $empleadoId;
+
+    // Subir documento al expediente
+    public bool $mostrarDoc = false;
+    public ?int $doc_tipo_id = null;
+    public string $doc_fecha_emision = '';
+    public string $doc_fecha_vencimiento = '';
+    public $doc_archivo = null;
 
     // Entrega de EPP
     public bool $mostrarEpp = false;
@@ -219,6 +228,37 @@ new class extends Component {
         session()->flash('ok', 'Entrega de EPP registrada.');
     }
 
+    // ---- Subir documento al expediente (misma fuente: módulo Documentos) ----
+    public function abrirSubirDocumento(): void
+    {
+        $this->reset(['doc_tipo_id', 'doc_fecha_emision', 'doc_fecha_vencimiento', 'doc_archivo']);
+        $this->resetErrorBag();
+        $this->mostrarDoc = true;
+    }
+
+    public function subirDocumento(): void
+    {
+        abort_unless(auth()->user()->can('documentos.crear'), 403);
+        $this->validate([
+            'doc_tipo_id' => ['required', 'exists:tipos_documento,id'],
+            'doc_fecha_emision' => ['nullable', 'date'],
+            'doc_fecha_vencimiento' => ['nullable', 'date'],
+            'doc_archivo' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+        ], [], ['doc_tipo_id' => 'tipo de documento', 'doc_archivo' => 'archivo']);
+
+        $empleado = Empleado::findOrFail($this->empleadoId);
+
+        Documento::create(array_merge([
+            'empleado_id' => $empleado->id,
+            'tipo_documento_id' => $this->doc_tipo_id,
+            'fecha_emision' => $this->doc_fecha_emision ?: null,
+            'fecha_vencimiento' => $this->doc_fecha_vencimiento ?: null,
+        ], app(ArchivoDocumento::class)->payload($this->doc_archivo, $empleado)));
+
+        $this->mostrarDoc = false;
+        session()->flash('ok', 'Documento subido al expediente.');
+    }
+
     public function with(): array
     {
         $empleado = Empleado::with(['area', 'cargo', 'sede', 'supervisor'])->findOrFail($this->empleadoId);
@@ -228,6 +268,7 @@ new class extends Component {
             'documentos' => Documento::with('tipoDocumento')
                 ->where('empleado_id', $this->empleadoId)
                 ->orderByDesc('fecha_vencimiento')->get(),
+            'tiposDocumento' => TipoDocumento::where('activo', true)->orderBy('nombre')->get(),
             'asignaciones' => Asignacion::with('activo')
                 ->where('empleado_id', $this->empleadoId)
                 ->orderByDesc('fecha_entrega')->orderByDesc('id')->get(),
@@ -346,6 +387,13 @@ new class extends Component {
 
     {{-- DOCUMENTOS --}}
     <section x-show="tab==='documentos'" x-cloak class="bg-surface border border-line rounded-xl overflow-x-auto">
+        @can('documentos.crear')
+            <div class="flex justify-end px-4 py-3 border-b border-line">
+                <button wire:click="abrirSubirDocumento" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
+                    <x-icon name="plus" class="w-4 h-4" /> Subir documento
+                </button>
+            </div>
+        @endcan
         <table class="w-full text-sm min-w-[560px]">
             <thead>
                 <tr class="text-left text-xs uppercase tracking-wide text-faint bg-canvas border-b border-line">
@@ -400,8 +448,8 @@ new class extends Component {
                             </span>
                         </td>
                         <td class="px-4 py-3">
-                            @if ($d->archivo_path)
-                                <a href="{{ Storage::url($d->archivo_path) }}" target="_blank" class="text-primary hover:underline">Ver</a>
+                            @if ($d->sharepoint_item_id || $d->archivo_path)
+                                <a href="{{ route('documentos.archivo', $d) }}" target="_blank" class="text-primary hover:underline">Ver</a>
                             @else <span class="text-faint">—</span> @endif
                         </td>
                     </tr>
@@ -698,6 +746,51 @@ new class extends Component {
             </tbody>
         </table>
     </section>
+
+    {{-- Modal: Subir documento al expediente --}}
+    @if ($mostrarDoc)
+        <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/40 p-4">
+            <div class="w-full max-w-md mt-16 rounded-2xl bg-surface shadow-xl">
+                <div class="flex items-center justify-between border-b border-line px-6 py-4">
+                    <h3 class="text-lg font-semibold text-navy">Subir documento</h3>
+                    <button wire:click="$set('mostrarDoc', false)" class="text-faint hover:text-ink text-xl leading-none">&times;</button>
+                </div>
+                <form wire:submit="subirDocumento" class="px-6 py-5 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-muted mb-1">Tipo de documento *</label>
+                        <select wire:model="doc_tipo_id" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                            <option value="">— Seleccionar (DNI, CV, contrato…) —</option>
+                            @foreach ($tiposDocumento as $t)
+                                <option value="{{ $t->id }}">{{ $t->nombre }}</option>
+                            @endforeach
+                        </select>
+                        @error('doc_tipo_id') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Fecha de emisión</label>
+                            <input type="date" wire:model="doc_fecha_emision" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Fecha de vencimiento</label>
+                            <input type="date" wire:model="doc_fecha_vencimiento" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-muted mb-1">Archivo (PDF o imagen) *</label>
+                        <input type="file" wire:model="doc_archivo" class="w-full text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-canvas file:px-3 file:py-2 file:text-muted">
+                        <div wire:loading wire:target="doc_archivo" class="text-xs text-faint mt-1">Subiendo…</div>
+                        @error('doc_archivo') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                    </div>
+                    <p class="text-xs text-faint">Se guarda en el módulo Documentos (SharePoint) y el trabajador lo verá en su portal.</p>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" wire:click="$set('mostrarDoc', false)" class="rounded-lg border border-line text-muted text-sm font-semibold px-4 py-2 hover:bg-canvas">Cancelar</button>
+                        <button type="submit" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">Subir</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
 
     {{-- Modal: Derechohabiente --}}
     @if ($mostrarDh)

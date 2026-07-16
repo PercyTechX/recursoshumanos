@@ -2,14 +2,19 @@
 
 use App\Models\Area;
 use App\Models\Cargo;
+use App\Models\Documento;
 use App\Models\Empleado;
 use App\Models\Sede;
+use App\Models\TipoDocumento;
+use App\Services\Documentos\ArchivoDocumento;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
+use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 
 new class extends Component {
+    use WithFileUploads;
     use WithPagination;
 
     #[Url]
@@ -61,6 +66,10 @@ new class extends Component {
     // Estado
     public string $situacion = 'activo';
     public string $fecha_cese = '';
+    // Documentos iniciales (solo al registrar; luego se gestionan en Documentos/expediente)
+    public $dni_archivo = null;
+    public string $dni_vencimiento = '';
+    public $cv_archivo = null;
 
     public function puedeVerSueldo(): bool
     {
@@ -104,6 +113,9 @@ new class extends Component {
             'cci' => ['nullable', 'string', 'max:25'],
             'situacion' => ['required', 'in:activo,cesado'],
             'fecha_cese' => ['nullable', 'date', 'required_if:situacion,cesado'],
+            'dni_archivo' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+            'dni_vencimiento' => ['nullable', 'date'],
+            'cv_archivo' => ['nullable', 'file', 'mimes:pdf', 'max:5120'],
         ];
     }
 
@@ -159,6 +171,9 @@ new class extends Component {
         abort_unless(auth()->user()->can($this->editandoId ? 'empleados.editar' : 'empleados.crear'), 403);
         $data = $this->validate();
 
+        // Los adjuntos iniciales no son columnas del empleado
+        unset($data['dni_archivo'], $data['dni_vencimiento'], $data['cv_archivo']);
+
         // Si está activo, no debe quedar fecha de cese
         if ($data['situacion'] !== 'cesado') {
             $data['fecha_cese'] = null;
@@ -176,10 +191,45 @@ new class extends Component {
             unset($data['sueldo']);
         }
 
-        Empleado::updateOrCreate(['id' => $this->editandoId], $data);
+        $empleado = Empleado::updateOrCreate(['id' => $this->editandoId], $data);
+
+        // DNI y CV adjuntados al registrar → entran al módulo Documentos (SharePoint + portal)
+        if (! $this->editandoId) {
+            $this->adjuntarDocumentosIniciales($empleado);
+        }
+
         $this->mostrarForm = false;
         $this->resetForm();
         session()->flash('ok', 'Empleado guardado correctamente.');
+    }
+
+    /** Crea los Documentos del DNI y CV subidos en el registro (una sola fuente: módulo Documentos). */
+    private function adjuntarDocumentosIniciales(Empleado $empleado): void
+    {
+        $svc = app(ArchivoDocumento::class);
+
+        if ($this->dni_archivo) {
+            $tipo = TipoDocumento::firstOrCreate(
+                ['nombre' => 'DNI'],
+                ['dias_aviso_previo' => 30, 'requiere_vigencia' => true, 'compartible' => false],
+            );
+            Documento::create(array_merge([
+                'empleado_id' => $empleado->id,
+                'tipo_documento_id' => $tipo->id,
+                'fecha_vencimiento' => $this->dni_vencimiento ?: null,
+            ], $svc->payload($this->dni_archivo, $empleado)));
+        }
+
+        if ($this->cv_archivo) {
+            $tipo = TipoDocumento::firstOrCreate(
+                ['nombre' => 'Hoja de Vida (CV)'],
+                ['dias_aviso_previo' => 0, 'requiere_vigencia' => false, 'compartible' => false],
+            );
+            Documento::create(array_merge([
+                'empleado_id' => $empleado->id,
+                'tipo_documento_id' => $tipo->id,
+            ], $svc->payload($this->cv_archivo, $empleado)));
+        }
     }
 
     public function eliminar(int $id): void
@@ -198,7 +248,7 @@ new class extends Component {
             'area_id', 'cargo_id', 'sede_id', 'supervisor_id', 'fecha_ingreso', 'tipo_contrato', 'tipo_trabajador',
             'regimen_laboral', 'modalidad_pago', 'sueldo', 'sistema_pensionario', 'cuspp', 'afp_nombre',
             'tiene_seguro', 'banco', 'numero_cuenta', 'cci',
-            'fecha_cese',
+            'fecha_cese', 'dni_archivo', 'dni_vencimiento', 'cv_archivo',
         ]);
         $this->tipo_documento = 'DNI';
         $this->nacionalidad = 'Peruana';
@@ -585,6 +635,31 @@ new class extends Component {
                                 @error('fecha_cese') <span class="text-danger text-xs">{{ $message }}</span> @enderror
                             </div>
                         @endif
+
+                        {{-- Sección: Documentos iniciales (solo al registrar) --}}
+                        @unless ($editandoId)
+                            <div class="sm:col-span-2 border-t border-line pt-3 mt-1">
+                                <span class="text-xs font-semibold uppercase tracking-wide text-primary">Documentos iniciales (opcional)</span>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-muted mb-1">DNI (PDF o imagen)</label>
+                                <input type="file" wire:model="dni_archivo" class="w-full text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-canvas file:px-3 file:py-2 file:text-muted">
+                                <div wire:loading wire:target="dni_archivo" class="text-xs text-faint mt-1">Subiendo…</div>
+                                @error('dni_archivo') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-muted mb-1">Vencimiento del DNI</label>
+                                <input type="date" wire:model="dni_vencimiento" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                                <span class="text-xs text-faint">Para el semáforo de vencimientos</span>
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-sm font-medium text-muted mb-1">CV / Hoja de vida (PDF)</label>
+                                <input type="file" wire:model="cv_archivo" accept="application/pdf" class="w-full text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-canvas file:px-3 file:py-2 file:text-muted">
+                                <div wire:loading wire:target="cv_archivo" class="text-xs text-faint mt-1">Subiendo…</div>
+                                @error('cv_archivo') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                                <p class="text-xs text-faint mt-1">Se guardan como documentos del trabajador (SharePoint) y él los verá en su portal. También puedes subirlos después desde su expediente.</p>
+                            </div>
+                        @endunless
                     </div>
 
                     <div class="flex justify-end gap-2 pt-2">
