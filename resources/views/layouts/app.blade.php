@@ -55,6 +55,12 @@
                             <x-icon name="document" class="w-5 h-5 shrink-0" /> Documentos
                         </a>
                     @endcan
+                    @can('boletas.ver')
+                        <a href="{{ route('boletas.index') }}" wire:navigate
+                           class="{{ $itemBase }} {{ request()->routeIs('boletas.*') ? $itemOn : $itemOff }}">
+                            <x-icon name="cash" class="w-5 h-5 shrink-0" /> Boletas de pago
+                        </a>
+                    @endcan
                     @can('documentos_compartidos.ver')
                         <a href="{{ route('documentos-compartidos.index') }}" wire:navigate
                            class="{{ $itemBase }} {{ request()->routeIs('documentos-compartidos.*') ? $itemOn : $itemOff }}">

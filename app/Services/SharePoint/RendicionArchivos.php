@@ -7,25 +7,25 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Sube a SharePoint (destino "rendiciones" → CONTABILIDAD/Rend_Sistemas) los
- * archivos de rendiciones que quedaron guardados localmente. Patrón
- * guardar-temporal-y-reintentar: si Graph falla, el archivo NO se pierde (queda
- * local con estado "pendiente") y se puede reintentar. Ver docs/16.
+ * Sube a SharePoint los archivos de un modelo que quedaron guardados localmente,
+ * con el patrón guardar-temporal-y-reintentar: si Graph falla, el archivo NO se
+ * pierde (queda local con estado "pendiente") y se puede reintentar. Ver docs/16.
  *
- * Cada modelo usa un juego de columnas con prefijo: {p}_path, {p}_nombre,
- * {p}_item_id, {p}_web_url, {p}_status. Ej. voucher_*, archivo_*, comprobante_*.
+ * Nació para rendiciones (destino por defecto) pero es genérico: también lo usan
+ * las boletas de pago (destino "documentos"). Cada modelo usa un juego de columnas
+ * con prefijo: {p}_path, {p}_nombre, {p}_item_id, {p}_web_url, {p}_status.
  */
 class RendicionArchivos
 {
     public function __construct(private SharePointDocs $sp) {}
 
     /**
-     * Sube el archivo local del modelo (columnas {prefijo}_*) a rendiciones/{subcarpeta}.
+     * Sube el archivo local del modelo (columnas {prefijo}_*) a {destino}/{subcarpeta}.
      * No-op si no hay Graph configurado, si ya está subido o si no hay archivo local.
      * $nombre permite fijar el nombre en SharePoint cuando el modelo no tiene
      * columna {prefijo}_nombre (p.ej. el resumen PDF). Devuelve true si subió.
      */
-    public function subir(Model $m, string $prefijo, string $subcarpeta, ?string $nombre = null): bool
+    public function subir(Model $m, string $prefijo, string $subcarpeta, ?string $nombre = null, string $destino = 'rendiciones'): bool
     {
         if (empty(config('services.graph.tenant_id'))) {
             return false; // Graph no configurado (p.ej. en tests): se queda local/pendiente.
@@ -42,7 +42,7 @@ class RendicionArchivos
                 Storage::disk('public')->mimeType($path) ?: 'application/octet-stream',
                 $subcarpeta,
                 $nombre ?: ($m->{$prefijo.'_nombre'} ?: 'archivo'),
-                'rendiciones',
+                $destino,
             );
 
             Storage::disk('public')->delete($path);

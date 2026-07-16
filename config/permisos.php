@@ -16,6 +16,10 @@ return [
         'label' => 'Documentos',
         'acciones' => ['ver' => 'Ver', 'crear' => 'Crear', 'editar' => 'Editar', 'eliminar' => 'Eliminar', 'avisar' => 'Avisar al supervisor'],
     ],
+    'boletas' => [
+        'label' => 'Boletas de pago',
+        'acciones' => ['ver' => 'Ver', 'subir' => 'Subir', 'eliminar' => 'Eliminar'],
+    ],
     'documentos_compartidos' => [
         'label' => 'Documentos compartidos',
         'acciones' => ['ver' => 'Ver', 'crear' => 'Crear', 'editar' => 'Editar', 'eliminar' => 'Eliminar'],

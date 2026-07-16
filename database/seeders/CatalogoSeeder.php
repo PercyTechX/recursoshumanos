@@ -41,8 +41,8 @@ class CatalogoSeeder extends Seeder
         // Asignación por defecto (SOLO si el rol aún no tiene permisos — no pisa lo
         // que se configure luego desde la pantalla de Roles y accesos).
         $defaults = [
-            'RRHH' => array_merge($todos($basicos), $todos(['descuentos', 'usuarios'])),
-            'Gerencia' => array_merge($todos($basicos), $todos(['descuentos'])),
+            'RRHH' => array_merge($todos($basicos), $todos(['descuentos', 'usuarios', 'boletas'])),
+            'Gerencia' => array_merge($todos($basicos), $todos(['descuentos', 'boletas'])),
             'Supervisor' => $todos($basicos),
             'Contador' => $todos(['descuentos']),
         ];
