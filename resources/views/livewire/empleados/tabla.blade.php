@@ -508,7 +508,15 @@ new class extends Component {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-muted mb-1">Estado civil</label>
-                            <input type="text" wire:model="estado_civil" placeholder="Soltero(a), Casado(a)…" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                            <select wire:model="estado_civil" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                                <option value="">— Seleccionar —</option>
+                                @foreach (config('catalogos.estado_civil') as $op)
+                                    <option value="{{ $op }}">{{ $op }}</option>
+                                @endforeach
+                                @if ($estado_civil && ! in_array($estado_civil, config('catalogos.estado_civil'), true))
+                                    <option value="{{ $estado_civil }}">{{ $estado_civil }} (actual)</option>
+                                @endif
+                            </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-muted mb-1">Nacionalidad</label>
@@ -564,15 +572,39 @@ new class extends Component {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-muted mb-1">Tipo de contrato</label>
-                            <input type="text" wire:model="tipo_contrato" placeholder="Indefinido, Plazo fijo…" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                            <select wire:model="tipo_contrato" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                                <option value="">— Seleccionar —</option>
+                                @foreach (config('catalogos.tipo_contrato') as $op)
+                                    <option value="{{ $op }}">{{ $op }}</option>
+                                @endforeach
+                                @if ($tipo_contrato && ! in_array($tipo_contrato, config('catalogos.tipo_contrato'), true))
+                                    <option value="{{ $tipo_contrato }}">{{ $tipo_contrato }} (actual)</option>
+                                @endif
+                            </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-muted mb-1">Tipo de trabajador</label>
-                            <input type="text" wire:model="tipo_trabajador" placeholder="Empleado, Practicante…" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                            <select wire:model="tipo_trabajador" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                                <option value="">— Seleccionar —</option>
+                                @foreach (config('catalogos.tipo_trabajador') as $op)
+                                    <option value="{{ $op }}">{{ $op }}</option>
+                                @endforeach
+                                @if ($tipo_trabajador && ! in_array($tipo_trabajador, config('catalogos.tipo_trabajador'), true))
+                                    <option value="{{ $tipo_trabajador }}">{{ $tipo_trabajador }} (actual)</option>
+                                @endif
+                            </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-muted mb-1">Régimen laboral</label>
-                            <input type="text" wire:model="regimen_laboral" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                            <select wire:model="regimen_laboral" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                                <option value="">— Seleccionar —</option>
+                                @foreach (config('catalogos.regimen_laboral') as $op)
+                                    <option value="{{ $op }}">{{ $op }}</option>
+                                @endforeach
+                                @if ($regimen_laboral && ! in_array($regimen_laboral, config('catalogos.regimen_laboral'), true))
+                                    <option value="{{ $regimen_laboral }}">{{ $regimen_laboral }} (actual)</option>
+                                @endif
+                            </select>
                         </div>
 
                         {{-- Sección: Contacto --}}
@@ -671,7 +703,15 @@ new class extends Component {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-muted mb-1">Banco</label>
-                            <input type="text" wire:model="banco" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                            <select wire:model="banco" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                                <option value="">— Seleccionar —</option>
+                                @foreach (config('catalogos.bancos') as $op)
+                                    <option value="{{ $op }}">{{ $op }}</option>
+                                @endforeach
+                                @if ($banco && ! in_array($banco, config('catalogos.bancos'), true))
+                                    <option value="{{ $banco }}">{{ $banco }} (actual)</option>
+                                @endif
+                            </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-muted mb-1">N° de cuenta</label>
