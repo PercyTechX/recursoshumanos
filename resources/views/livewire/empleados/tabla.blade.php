@@ -23,6 +23,9 @@ new class extends Component {
     #[Url]
     public string $filtroSituacion = '';
 
+    #[Url]
+    public bool $archivados = false;
+
     public bool $mostrarForm = false;
     public ?int $editandoId = null;
 
@@ -232,11 +235,39 @@ new class extends Component {
         }
     }
 
+    /** Archivar = borrado lógico. Conserva todo el histórico; reversible. */
     public function eliminar(int $id): void
     {
         abort_unless(auth()->user()->can('empleados.eliminar'), 403);
-        Empleado::findOrFail($id)->delete();
-        session()->flash('ok', 'Empleado eliminado.');
+        Empleado::findOrFail($id)->delete(); // soft delete
+        session()->flash('ok', 'Empleado archivado. Su historial se conserva; un SuperAdmin puede restaurarlo.');
+    }
+
+    /** Restaurar un empleado archivado (solo SuperAdmin). */
+    public function restaurar(int $id): void
+    {
+        abort_unless(auth()->user()->hasRole('SuperAdmin'), 403);
+        Empleado::onlyTrashed()->findOrFail($id)->restore();
+        session()->flash('ok', 'Empleado restaurado.');
+    }
+
+    /**
+     * Eliminar DEFINITIVAMENTE (borrado físico). Solo SuperAdmin y solo si el empleado
+     * NO tiene histórico — el caso "mal ingresado". Si tiene registros, se bloquea.
+     */
+    public function eliminarDefinitivo(int $id): void
+    {
+        abort_unless(auth()->user()->hasRole('SuperAdmin'), 403);
+        $emp = Empleado::withTrashed()->findOrFail($id);
+
+        if ($emp->tieneHistorial()) {
+            session()->flash('error', 'No se puede eliminar definitivamente: el trabajador tiene registros asociados (asistencia, documentos, etc.). Solo se puede archivar.');
+
+            return;
+        }
+
+        $emp->forceDelete();
+        session()->flash('ok', 'Empleado eliminado definitivamente.');
     }
 
     public function resetForm(): void
@@ -262,9 +293,18 @@ new class extends Component {
         $this->resetPage();
     }
 
+    public function updatingArchivados(): void
+    {
+        $this->resetPage();
+    }
+
     public function with(): array
     {
+        // "archivados" (onlyTrashed) es exclusivo del SuperAdmin.
+        $verArchivados = $this->archivados && auth()->user()->hasRole('SuperAdmin');
+
         $empleados = Empleado::query()
+            ->when($verArchivados, fn ($q) => $q->onlyTrashed())
             ->with(['area', 'cargo', 'sede'])
             ->when($this->buscar, fn ($q) => $q->where(fn ($w) => $w
                 ->where('nombres', 'like', '%'.$this->buscar.'%')
@@ -291,6 +331,18 @@ new class extends Component {
             {{ session('ok') }}
         </div>
     @endif
+    @if (session('error'))
+        <div class="mb-4 rounded-lg bg-danger-tint text-danger px-4 py-2 text-sm font-medium">
+            {{ session('error') }}
+        </div>
+    @endif
+
+    @if ($archivados)
+        <div class="mb-4 rounded-lg bg-warning-tint text-warning px-4 py-2 text-sm font-medium flex items-center justify-between">
+            <span>Viendo <strong>empleados archivados</strong>. Puedes restaurarlos o, si no tienen histórico, eliminarlos definitivamente.</span>
+            <button wire:click="$set('archivados', false)" class="underline">Volver a activos</button>
+        </div>
+    @endif
 
     {{-- Barra de acciones --}}
     <div class="flex flex-wrap items-center gap-2 mb-4">
@@ -313,6 +365,13 @@ new class extends Component {
                 <x-icon name="plus" class="w-4 h-4" /> Nuevo
             </button>
         @endcan
+
+        @role('SuperAdmin')
+            <button wire:click="$toggle('archivados')"
+                    class="inline-flex items-center gap-1.5 rounded-lg border text-sm font-semibold px-4 py-2 {{ $archivados ? 'bg-warning-tint text-warning border-warning/40' : 'border-line text-muted hover:bg-canvas' }}">
+                <x-icon name="trash" class="w-4 h-4" /> {{ $archivados ? 'Ver activos' : 'Ver archivados' }}
+            </button>
+        @endrole
 
         @can('empleados.exportar')
             <a href="{{ route('empleados.exportar', ['buscar' => $buscar, 'situacion' => $filtroSituacion]) }}"
@@ -362,20 +421,27 @@ new class extends Component {
                         <td class="px-4 py-3">
                             <div class="inline-flex items-center gap-1 justify-end w-full">
                                 @php $btn = 'inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-canvas transition-colors'; @endphp
-                                <a href="{{ route('empleados.show', $e) }}" wire:navigate class="{{ $btn }} text-muted hover:text-primary" title="Ver expediente">
-                                    <x-icon name="eye" />
-                                </a>
-                                @can('empleados.editar')
-                                    <button wire:click="editar({{ $e->id }})" class="{{ $btn }} text-primary" title="Editar">
-                                        <x-icon name="pencil" />
-                                    </button>
-                                @endcan
-                                @can('empleados.eliminar')
-                                    <button wire:click="eliminar({{ $e->id }})" wire:confirm="¿Eliminar a {{ $e->nombres }} {{ $e->apellidos }}?"
-                                            class="{{ $btn }} text-danger" title="Eliminar">
-                                        <x-icon name="trash" />
-                                    </button>
-                                @endcan
+                                @if ($archivados)
+                                    {{-- Vista de archivados (solo SuperAdmin) --}}
+                                    <button wire:click="restaurar({{ $e->id }})" class="text-xs font-semibold px-2.5 py-1 rounded-lg border border-line text-success hover:bg-canvas" title="Restaurar">Restaurar</button>
+                                    <button wire:click="eliminarDefinitivo({{ $e->id }})" wire:confirm="Esto BORRA definitivamente a {{ $e->nombres }} {{ $e->apellidos }}. Solo funciona si no tiene historial. ¿Continuar?"
+                                            class="text-xs font-semibold px-2.5 py-1 rounded-lg border border-danger/40 text-danger hover:bg-danger-tint" title="Eliminar definitivamente">Eliminar def.</button>
+                                @else
+                                    <a href="{{ route('empleados.show', $e) }}" wire:navigate class="{{ $btn }} text-muted hover:text-primary" title="Ver expediente">
+                                        <x-icon name="eye" />
+                                    </a>
+                                    @can('empleados.editar')
+                                        <button wire:click="editar({{ $e->id }})" class="{{ $btn }} text-primary" title="Editar">
+                                            <x-icon name="pencil" />
+                                        </button>
+                                    @endcan
+                                    @can('empleados.eliminar')
+                                        <button wire:click="eliminar({{ $e->id }})" wire:confirm="¿Archivar a {{ $e->nombres }} {{ $e->apellidos }}? Su historial se conserva."
+                                                class="{{ $btn }} text-danger" title="Archivar">
+                                            <x-icon name="trash" />
+                                        </button>
+                                    @endcan
+                                @endif
                             </div>
                         </td>
                     </tr>

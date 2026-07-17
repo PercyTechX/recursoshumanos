@@ -6,12 +6,37 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class Empleado extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     protected $table = 'empleados';
+
+    /**
+     * ¿El empleado tiene registros dependientes (histórico)? Se usa para permitir el
+     * borrado FÍSICO solo cuando no hay nada que perder (caso "mal ingresado").
+     * Cubre todas las tablas con FK cascadeOnDelete a empleados.
+     */
+    public function tieneHistorial(): bool
+    {
+        $tablas = [
+            'marcaciones', 'documentos', 'ausencias', 'solicitudes_vacaciones',
+            'movimientos_vacaciones', 'asignaciones', 'entregas_epp', 'derechohabientes',
+            'hojas_ruta', 'descuentos', 'rendicion_depositos', 'boletas_pago',
+            'ticket_tecnico', 'asistencia_dias', 'documento_compartido_empleado',
+        ];
+        foreach ($tablas as $tabla) {
+            if (DB::table($tabla)->where('empleado_id', $this->id)->exists()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     protected $fillable = [
         'user_id', 'supervisor_id', 'area_id', 'cargo_id', 'sede_id',
