@@ -203,6 +203,7 @@ new class extends Component {
         <div class="inline-flex rounded-lg border border-line overflow-hidden">
             <button wire:click="$set('vista', 'marcaciones')" class="px-4 py-2 text-sm font-medium {{ $vista === 'marcaciones' ? 'bg-primary text-white' : 'bg-surface text-muted hover:bg-canvas' }}">Marcaciones</button>
             <button wire:click="$set('vista', 'tickets')" class="px-4 py-2 text-sm font-medium {{ $vista === 'tickets' ? 'bg-primary text-white' : 'bg-surface text-muted hover:bg-canvas' }}">Operación de tickets</button>
+            <button wire:click="$set('vista', 'resumen')" class="px-4 py-2 text-sm font-medium {{ $vista === 'resumen' ? 'bg-primary text-white' : 'bg-surface text-muted hover:bg-canvas' }}">Resumen diario</button>
         </div>
         <div class="flex-1"></div>
         @if ($vista === 'marcaciones')
@@ -211,7 +212,7 @@ new class extends Component {
                     <x-icon name="plus" class="w-4 h-4" /> Marcación manual
                 </button>
             @endcan
-        @else
+        @elseif ($vista === 'tickets')
             @can('asistencia.registrar')
                 <button wire:click="nuevoAvance" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
                     <x-icon name="plus" class="w-4 h-4" /> Avance manual
@@ -287,6 +288,9 @@ new class extends Component {
             </table>
         </div>
         <div class="mt-4">{{ $marcaciones->links() }}</div>
+    @elseif ($vista === 'resumen')
+        {{-- Resumen diario: refrigerios (D/A/C) + VB del supervisor --}}
+        <livewire:asistencia.resumen />
     @else
         {{-- Operación de tickets: técnicos con ticket activo --}}
         <div class="overflow-x-auto rounded-xl border border-line bg-surface">
