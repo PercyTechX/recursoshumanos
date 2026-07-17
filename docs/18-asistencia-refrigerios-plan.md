@@ -1,6 +1,6 @@
 # 18 · Asistencia — Refrigerios (D/A/C) y Visto Bueno del supervisor
 
-> **Estado:** PLANIFICACIÓN (2026-07-17). Agrega a Control de asistencia una vista
+> **Estado:** ✅ CONSTRUIDO COMPLETO (2026-07-17, Fases A-C, 176 tests). Pendiente re-deploy.. Agrega a Control de asistencia una vista
 > "Resumen diario" (por empleado × día) con descuento de refrigerios y VB del
 > supervisor, y ajusta las horas de los reportes a **horas netas**.
 
