@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AsistenciaDia;
 use App\Models\Empleado;
 use App\Models\Marcacion;
 use App\Models\TicketAvance;
@@ -77,6 +78,14 @@ new class extends Component {
             ->selectRaw('ticket_tecnico.empleado_id as eid, count(distinct ticket_tecnico.ticket_id) as n')
             ->groupBy('ticket_tecnico.empleado_id')->pluck('n', 'eid');
 
+        // Refrigerios (D/A/C) del rango: minutos a descontar por empleado (60 por comida).
+        $refrigerioPorEmp = AsistenciaDia::query()
+            ->whereBetween('fecha', [$this->desde, $this->hasta])
+            ->when($this->empleado_id, fn ($q) => $q->where('empleado_id', $this->empleado_id))
+            ->get()
+            ->groupBy('empleado_id')
+            ->map(fn ($dias) => $dias->sum(fn ($d) => $d->refrigerio_minutos));
+
         $empleados = Empleado::whereIn('id', $marcs->keys())->get()->keyBy('id');
 
         $filas = [];
@@ -84,10 +93,13 @@ new class extends Component {
         foreach ($marcs as $eid => $lista) {
             $j = $this->jornadas($lista);
             $min = array_sum(array_column($j, 'minutos'));
+            $refri = (int) ($refrigerioPorEmp[$eid] ?? 0);
             $filas[] = [
                 'empleado' => $empleados[$eid] ?? null,
                 'jornadas' => count($j),
-                'minutos' => $min,
+                'minutos' => $min,                              // brutas
+                'refrigerio_min' => $refri,
+                'minutos_netos' => max(0, $min - $refri),       // netas
                 'tickets' => (int) ($ticketsPorEmp[$eid] ?? 0),
             ];
             if ($this->empleado_id && (int) $eid === (int) $this->empleado_id) {
@@ -283,9 +295,27 @@ new class extends Component {
             return ExcelExport::descargar($base, $columnas, $filas, 'Reporte de asistencia — Detallado (trazabilidad) '.$periodo);
         }
 
-        $columnas = ['Apellidos', 'Nombres', 'Documento', 'Fecha', 'Ingreso', 'Salida', 'Horas (decimal)', 'Horas (hh:mm)', 'GPS Ingreso', 'Ver Ingreso', 'GPS Salida', 'Ver Salida'];
-        $filas = array_map(function ($f) {
+        $jornadas = $this->filasJornadas();
+
+        // Refrigerios (por empleado × día) y horas brutas del día, para el descuento.
+        $refriMap = AsistenciaDia::whereBetween('fecha', [$this->desde, $this->hasta])
+            ->when($this->empleado_id, fn ($q) => $q->where('empleado_id', $this->empleado_id))
+            ->get()->keyBy(fn ($d) => $d->empleado_id.'|'.$d->fecha->toDateString())
+            ->map(fn ($d) => $d->refrigerio_minutos);
+        $brutosDia = [];
+        foreach ($jornadas as $x) {
+            $k = ($x['emp']?->id).'|'.$x['j']['ingreso']->toDateString();
+            $brutosDia[$k] = ($brutosDia[$k] ?? 0) + $x['j']['minutos'];
+        }
+
+        $vistoDia = [];
+        $columnas = ['Apellidos', 'Nombres', 'Documento', 'Fecha', 'Ingreso', 'Salida', 'Horas (decimal)', 'Horas (hh:mm)', 'Refrigerio día (h)', 'Horas netas día (h)', 'GPS Ingreso', 'Ver Ingreso', 'GPS Salida', 'Ver Salida'];
+        $filas = array_map(function ($f) use (&$vistoDia, $refriMap, $brutosDia) {
             $j = $f['j'];
+            $k = ($f['emp']?->id).'|'.$j['ingreso']->toDateString();
+            $primeraDelDia = ! isset($vistoDia[$k]);
+            $vistoDia[$k] = true;
+            $refri = (int) ($refriMap[$k] ?? 0);
 
             return [
                 $f['emp']?->apellidos,
@@ -296,12 +326,15 @@ new class extends Component {
                 $j['salida']?->format('H:i') ?? '',
                 $j['salida'] ? round($j['minutos'] / 60, 2) : '',
                 $j['salida'] ? intdiv($j['minutos'], 60).':'.str_pad($j['minutos'] % 60, 2, '0', STR_PAD_LEFT) : '',
+                // El refrigerio y las netas son POR DÍA → van en la 1ª jornada del día.
+                $primeraDelDia ? round($refri / 60, 2) : '',
+                $primeraDelDia ? round(max(0, ($brutosDia[$k] ?? 0) - $refri) / 60, 2) : '',
                 $this->gps($j['ing_lat'], $j['ing_lng']),
                 $this->verMapa($j['ing_lat'], $j['ing_lng']),
                 $this->gps($j['sal_lat'], $j['sal_lng']),
                 $this->verMapa($j['sal_lat'], $j['sal_lng']),
             ];
-        }, $this->filasJornadas());
+        }, $jornadas);
 
         return ExcelExport::descargar($base, $columnas, $filas, 'Reporte de asistencia — General (jornadas) '.$periodo);
     }
@@ -365,7 +398,9 @@ new class extends Component {
                 <tr class="text-left text-xs uppercase tracking-wide text-faint bg-canvas border-b border-line">
                     <th class="px-4 py-3">Empleado</th>
                     <th class="px-4 py-3 text-center">Jornadas</th>
-                    <th class="px-4 py-3 text-right">Horas trabajadas</th>
+                    <th class="px-4 py-3 text-right">Horas brutas</th>
+                    <th class="px-4 py-3 text-right">Refrigerios</th>
+                    <th class="px-4 py-3 text-right">Horas netas</th>
                     <th class="px-4 py-3 text-center">Tickets operados</th>
                 </tr>
             </thead>
@@ -374,11 +409,13 @@ new class extends Component {
                     <tr class="border-b border-line last:border-0">
                         <td class="px-4 py-3 text-ink">{{ $f['empleado']?->apellidos }}, {{ $f['empleado']?->nombres }}</td>
                         <td class="px-4 py-3 text-center tabular-nums">{{ $f['jornadas'] }}</td>
-                        <td class="px-4 py-3 text-right tabular-nums font-semibold text-ink">{{ $horas($f['minutos']) }}</td>
+                        <td class="px-4 py-3 text-right tabular-nums text-muted">{{ $horas($f['minutos']) }}</td>
+                        <td class="px-4 py-3 text-right tabular-nums {{ $f['refrigerio_min'] > 0 ? 'text-primary' : 'text-faint' }}">{{ $f['refrigerio_min'] > 0 ? '−'.$horas($f['refrigerio_min']) : '—' }}</td>
+                        <td class="px-4 py-3 text-right tabular-nums font-semibold text-ink">{{ $horas($f['minutos_netos']) }}</td>
                         <td class="px-4 py-3 text-center tabular-nums text-muted">{{ $f['tickets'] }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="4" class="px-4 py-8 text-center text-faint">Sin marcaciones en el rango elegido.</td></tr>
+                    <tr><td colspan="6" class="px-4 py-8 text-center text-faint">Sin marcaciones en el rango elegido.</td></tr>
                 @endforelse
             </tbody>
         </table>

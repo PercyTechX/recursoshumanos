@@ -92,6 +92,20 @@ class ReporteAsistenciaTest extends TestCase
             ->assertSee('dentro de zona');
     }
 
+    public function test_refrigerios_descuentan_horas_netas(): void
+    {
+        $this->supervisor();
+        $e = \App\Models\Empleado::create(['numero_documento' => '55667788', 'nombres' => 'Neto', 'apellidos' => 'Refri']);
+        $this->marcar($e->id, 'ingreso', '2026-07-05 08:00:00'); // 9h brutas
+        $this->marcar($e->id, 'salida', '2026-07-05 17:00:00');
+        \App\Models\AsistenciaDia::create(['empleado_id' => $e->id, 'fecha' => '2026-07-05', 'almuerzo' => true, 'cena' => true]);
+
+        Volt::test('asistencia.reporte')
+            ->set('desde', '2026-07-01')->set('hasta', '2026-07-31')
+            ->assertSee('9h 0m')   // brutas
+            ->assertSee('7h 0m');  // netas (9h − 2 refrigerios)
+    }
+
     public function test_exporta_general_xls(): void
     {
         $this->supervisor();
