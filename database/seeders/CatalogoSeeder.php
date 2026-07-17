@@ -38,12 +38,15 @@ class CatalogoSeeder extends Seeder
             ->all();
         $basicos = ['empleados', 'documentos', 'documentos_compartidos', 'activos', 'vacaciones', 'ausencias', 'clientes', 'tickets', 'asistencia', 'rendiciones'];
 
+        // El Visto Bueno de asistencia es exclusivo del Supervisor por defecto.
+        $sinVb = fn (array $mods) => array_values(array_diff($todos($mods), ['asistencia.vb']));
+
         // Asignación por defecto (SOLO si el rol aún no tiene permisos — no pisa lo
         // que se configure luego desde la pantalla de Roles y accesos).
         $defaults = [
-            'RRHH' => array_merge($todos($basicos), $todos(['descuentos', 'usuarios', 'boletas'])),
-            'Gerencia' => array_merge($todos($basicos), $todos(['descuentos', 'boletas'])),
-            'Supervisor' => $todos($basicos),
+            'RRHH' => array_merge($sinVb($basicos), $todos(['descuentos', 'usuarios', 'boletas'])),
+            'Gerencia' => array_merge($sinVb($basicos), $todos(['descuentos', 'boletas'])),
+            'Supervisor' => $todos($basicos), // incluye asistencia.vb
             'Contador' => $todos(['descuentos']),
         ];
         foreach ($defaults as $rol => $permisos) {

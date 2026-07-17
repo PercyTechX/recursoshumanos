@@ -50,7 +50,7 @@ return [
     ],
     'asistencia' => [
         'label' => 'Asistencia (control)',
-        'acciones' => ['ver' => 'Ver', 'registrar' => 'Registrar manual', 'editar' => 'Editar/corregir'],
+        'acciones' => ['ver' => 'Ver', 'registrar' => 'Registrar manual', 'editar' => 'Editar/corregir', 'vb' => 'Visto bueno (supervisor)'],
     ],
     'rendiciones' => [
         'label' => 'Rendiciones (caja chica)',
