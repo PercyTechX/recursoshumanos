@@ -1,6 +1,8 @@
 # 17 · Licencias, permisos y descansos — Plan de diseño
 
-> **Estado:** PLANIFICACIÓN (2026-07-17). Extiende el módulo **Ausencias** existente
+> **Estado:** ✅ CONSTRUIDO COMPLETO (2026-07-17, Fases A-D, 168 tests verdes).
+> Pendiente: re-deploy a producción (migración + permisos nuevos vía /_setup).
+> Extiende el módulo **Ausencias** existente
 > (NO se crea módulo paralelo). Solicitud del trabajador + doble aprobación
 > (Supervisor → RRHH) + sustento a SharePoint. Solo registrar/documentar (sin planilla).
 
