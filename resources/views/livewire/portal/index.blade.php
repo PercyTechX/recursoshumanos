@@ -3,6 +3,7 @@
 use App\Models\Ausencia;
 use App\Models\BoletaPago;
 use App\Models\Documento;
+use App\Models\Empleado;
 use App\Models\Marcacion;
 use App\Models\MovimientoVacaciones;
 use App\Models\RendicionDeposito;
@@ -10,10 +11,15 @@ use App\Models\SolicitudVacaciones;
 use App\Models\Ticket;
 use App\Models\TicketAvance;
 use App\Models\TicketTecnico;
+use App\Services\SharePoint\RendicionArchivos;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Livewire\Volt\Component;
+use Livewire\WithFileUploads;
 
 new class extends Component {
+    use WithFileUploads;
+
     public ?int $empleadoId = null;
 
     // Solicitar vacaciones
@@ -21,6 +27,14 @@ new class extends Component {
     public string $fecha_inicio = '';
     public string $fecha_fin = '';
     public string $motivo = '';
+
+    // Solicitar licencia / permiso
+    public bool $mostrarLic = false;
+    public string $lic_tipo = '';
+    public string $lic_inicio = '';
+    public string $lic_fin = '';
+    public string $lic_motivo = '';
+    public $lic_archivo = null;
 
     public function mount(): void
     {
@@ -175,6 +189,75 @@ new class extends Component {
     }
 
     /** El trabajador solo puede cancelar SUS solicitudes aún pendientes. */
+    // ---- Solicitar licencia / permiso (doble aprobación: supervisor → RRHH) ----
+    public function abrirLicencia(): void
+    {
+        $this->reset(['lic_tipo', 'lic_inicio', 'lic_fin', 'lic_motivo', 'lic_archivo']);
+        $this->resetErrorBag();
+        $this->mostrarLic = true;
+    }
+
+    public function solicitarLicencia(): void
+    {
+        abort_if($this->empleadoId === null, 403);
+
+        $requiere = Ausencia::requiereSustentoTipo($this->lic_tipo);
+        $this->validate([
+            'lic_tipo' => ['required', Rule::in(array_keys(Ausencia::solicitables()))],
+            'lic_inicio' => ['required', 'date'],
+            'lic_fin' => ['required', 'date', 'after_or_equal:lic_inicio'],
+            'lic_motivo' => ['nullable', 'string', 'max:300'],
+            'lic_archivo' => [$requiere ? 'required' : 'nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+        ], [], [
+            'lic_tipo' => 'tipo', 'lic_inicio' => 'fecha de inicio', 'lic_fin' => 'fecha de fin', 'lic_archivo' => 'sustento',
+        ]);
+
+        $empleado = Empleado::findOrFail($this->empleadoId);
+
+        $aus = new Ausencia([
+            'empleado_id' => $this->empleadoId,
+            'tipo' => $this->lic_tipo,
+            'con_goce' => Ausencia::gocePorDefecto($this->lic_tipo),
+            'fecha_inicio' => $this->lic_inicio,
+            'fecha_fin' => $this->lic_fin,
+            'dias' => Ausencia::calcularDias($this->lic_inicio, $this->lic_fin),
+            'motivo' => $this->lic_motivo ?: null,
+            'estado' => Ausencia::PENDIENTE_SUPERVISOR,
+            'solicitado_por' => auth()->id(),
+            'created_by' => auth()->id(),
+        ]);
+        if ($this->lic_archivo) {
+            $aus->archivo_nombre = $this->lic_archivo->getClientOriginalName();
+            $aus->archivo_path = $this->lic_archivo->store('ausencias', 'public');
+            $aus->archivo_status = 'pendiente';
+        }
+        $aus->save();
+
+        if ($this->lic_archivo) {
+            app(RendicionArchivos::class)->subir($aus, 'archivo', $this->carpetaLicencia($empleado), null, 'documentos');
+        }
+
+        $this->reset(['lic_tipo', 'lic_inicio', 'lic_fin', 'lic_motivo', 'lic_archivo']);
+        $this->mostrarLic = false;
+        session()->flash('ok', 'Solicitud enviada. Queda pendiente de aprobación.');
+    }
+
+    private function carpetaLicencia(Empleado $emp): string
+    {
+        return trim(($emp->numero_documento ?? 's-d').' - '.($emp->apellidos ?? '').' '.($emp->nombres ?? '')).'/Licencias';
+    }
+
+    public function cancelarLicencia(int $id): void
+    {
+        abort_if($this->empleadoId === null, 403);
+        $a = Ausencia::where('empleado_id', $this->empleadoId)->findOrFail($id);
+        if ($a->puede('cancelar')) {
+            $a->transicionar('cancelar');
+            $a->save();
+            session()->flash('ok', 'Solicitud cancelada.');
+        }
+    }
+
     /** El trabajador confirma la recepción de SU boleta (valor probatorio). */
     public function confirmarRecepcionBoleta(int $id): void
     {
@@ -221,7 +304,8 @@ new class extends Component {
             'solicitudes' => SolicitudVacaciones::where('empleado_id', $this->empleadoId)
                 ->orderByDesc('fecha_inicio')->get(),
             'saldoVac' => $empleado->saldo_vacaciones,
-            'ausencias' => Ausencia::where('empleado_id', $this->empleadoId)->orderByDesc('fecha_inicio')->get(),
+            'ausencias' => Ausencia::where('empleado_id', $this->empleadoId)->orderByDesc('fecha_inicio')->orderByDesc('id')->get(),
+            'tiposLicencia' => Ausencia::solicitables(),
             'diasCalc' => SolicitudVacaciones::calcularDias($this->fecha_inicio, $this->fecha_fin),
             'rendiciones' => RendicionDeposito::where('empleado_id', $this->empleadoId)->with('ticket')->orderByDesc('id')->get(),
             'boletas' => BoletaPago::where('empleado_id', $this->empleadoId)->orderByDesc('periodo')->orderBy('tipo')->get(),
@@ -619,30 +703,59 @@ new class extends Component {
             </div>
         </section>
 
-        {{-- MIS AUSENCIAS --}}
-        <section x-show="tab==='ausencias'" x-cloak class="bg-surface border border-line rounded-xl overflow-x-auto">
-            <table class="w-full text-sm min-w-[520px]">
-                <thead>
-                    <tr class="text-left text-xs uppercase tracking-wide text-faint bg-canvas border-b border-line">
-                        <th class="px-4 py-3">Tipo</th>
-                        <th class="px-4 py-3">Periodo</th>
-                        <th class="px-4 py-3 text-center">Días</th>
-                        <th class="px-4 py-3">Goce</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($ausencias as $a)
-                        <tr class="border-b border-line last:border-0">
-                            <td class="px-4 py-3 text-ink">{{ $a->tipo_label }}</td>
-                            <td class="px-4 py-3 text-muted tabular-nums">{{ $a->fecha_inicio->format('d/m/Y') }} → {{ $a->fecha_fin->format('d/m/Y') }}</td>
-                            <td class="px-4 py-3 text-center tabular-nums">{{ $a->dias }}</td>
-                            <td class="px-4 py-3">{!! $a->con_goce ? '<span class="text-success text-xs font-semibold">Con goce</span>' : '<span class="text-muted text-xs font-semibold">Sin goce</span>' !!}</td>
+        {{-- MIS AUSENCIAS / LICENCIAS --}}
+        <section x-show="tab==='ausencias'" x-cloak>
+            @php
+                $badgeL = [
+                    'pendiente_supervisor' => 'bg-warning-tint text-warning', 'pendiente_rrhh' => 'bg-warning-tint text-warning',
+                    'aprobada' => 'bg-success-tint text-success', 'rechazada' => 'bg-danger-tint text-danger',
+                    'cancelada' => 'bg-canvas text-faint',
+                ];
+            @endphp
+            <div class="flex justify-end mb-4">
+                <button wire:click="abrirLicencia" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
+                    <x-icon name="plus" class="w-4 h-4" /> Solicitar licencia / permiso
+                </button>
+            </div>
+            <div class="bg-surface border border-line rounded-xl overflow-x-auto">
+                <table class="w-full text-sm min-w-[640px]">
+                    <thead>
+                        <tr class="text-left text-xs uppercase tracking-wide text-faint bg-canvas border-b border-line">
+                            <th class="px-4 py-3">Tipo</th>
+                            <th class="px-4 py-3">Periodo</th>
+                            <th class="px-4 py-3 text-center">Días</th>
+                            <th class="px-4 py-3">Estado</th>
+                            <th class="px-4 py-3">Sustento</th>
+                            <th class="px-4 py-3 text-right">Acción</th>
                         </tr>
-                    @empty
-                        <tr><td colspan="4" class="px-4 py-8 text-center text-faint">No tienes ausencias registradas.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @forelse ($ausencias as $a)
+                            <tr class="border-b border-line last:border-0">
+                                <td class="px-4 py-3 text-ink">{{ $a->tipo_label }} @unless ($a->con_goce)<span class="text-faint text-xs">· sin goce</span>@endunless</td>
+                                <td class="px-4 py-3 text-muted tabular-nums">{{ $a->fecha_inicio->format('d/m/Y') }} → {{ $a->fecha_fin->format('d/m/Y') }}</td>
+                                <td class="px-4 py-3 text-center tabular-nums">{{ $a->dias }}</td>
+                                <td class="px-4 py-3">
+                                    <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $badgeL[$a->estado] ?? 'bg-canvas text-faint' }}">{{ $a->estado_label }}</span>
+                                    @if ($a->estado === 'rechazada' && $a->comentario_decision)<div class="text-danger text-[11px] mt-1">{{ $a->comentario_decision }}</div>@endif
+                                </td>
+                                <td class="px-4 py-3">
+                                    @if ($a->archivo_item_id || $a->archivo_path)
+                                        <a href="{{ route('portal.ausencia', $a) }}" target="_blank" class="text-primary hover:underline">Ver</a>
+                                    @else <span class="text-faint">—</span> @endif
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    @if ($a->estaPendiente())
+                                        <button wire:click="cancelarLicencia({{ $a->id }})" wire:confirm="¿Cancelar tu solicitud?" class="text-muted hover:underline text-sm font-medium">Cancelar</button>
+                                    @else <span class="text-faint">—</span> @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="6" class="px-4 py-8 text-center text-faint">No tienes licencias ni ausencias registradas.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
         </section>
 
         {{-- MIS RENDICIONES --}}
@@ -669,6 +782,62 @@ new class extends Component {
                     </div>
                 @endforeach
             </section>
+        @endif
+
+        {{-- Modal solicitar licencia / permiso --}}
+        @if ($mostrarLic)
+            @php $licRequiere = $lic_tipo ? \App\Models\Ausencia::requiereSustentoTipo($lic_tipo) : false; @endphp
+            <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/40 p-4">
+                <div class="w-full max-w-md mt-16 rounded-2xl bg-surface shadow-xl">
+                    <div class="flex items-center justify-between border-b border-line px-6 py-4">
+                        <h3 class="text-lg font-semibold text-navy">Solicitar licencia / permiso</h3>
+                        <button wire:click="$set('mostrarLic', false)" class="text-faint hover:text-ink text-xl leading-none">&times;</button>
+                    </div>
+                    <form wire:submit="solicitarLicencia" class="px-6 py-5 space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Tipo *</label>
+                            <select wire:model.live="lic_tipo" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                                <option value="">— Seleccionar —</option>
+                                @foreach ($tiposLicencia as $k => $t)
+                                    <option value="{{ $k }}">{{ $t[0] }}</option>
+                                @endforeach
+                            </select>
+                            @error('lic_tipo') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-muted mb-1">Desde *</label>
+                                <input type="date" wire:model.live="lic_inicio" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                                @error('lic_inicio') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-muted mb-1">Hasta *</label>
+                                <input type="date" wire:model.live="lic_fin" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                                @error('lic_fin') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                            </div>
+                        </div>
+                        @if ($lic_inicio && $lic_fin)
+                            <p class="text-xs text-muted">{{ \App\Models\Ausencia::calcularDias($lic_inicio, $lic_fin) }} día(s) calendario.</p>
+                        @endif
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Motivo</label>
+                            <input type="text" wire:model="lic_motivo" placeholder="Detalle breve" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                            @error('lic_motivo') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-muted mb-1">Sustento (PDF o imagen) {!! $licRequiere ? '<span class="text-danger">*</span>' : '<span class="text-faint">(opcional)</span>' !!}</label>
+                            <input type="file" wire:model="lic_archivo" class="w-full text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-canvas file:px-3 file:py-2 file:text-muted">
+                            <div wire:loading wire:target="lic_archivo" class="text-xs text-faint mt-1">Subiendo…</div>
+                            @error('lic_archivo') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                            @if ($licRequiere)<p class="text-xs text-warning mt-1">Este tipo requiere adjuntar el sustento (CITT, acta, etc.).</p>@endif
+                        </div>
+                        <div class="flex justify-end gap-2">
+                            <button type="button" wire:click="$set('mostrarLic', false)" class="rounded-lg border border-line text-muted text-sm font-semibold px-4 py-2 hover:bg-canvas">Cancelar</button>
+                            <button type="submit" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">Enviar solicitud</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         @endif
 
         {{-- Modal solicitar vacaciones --}}

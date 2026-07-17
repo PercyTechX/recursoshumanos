@@ -56,6 +56,14 @@ Route::get('mi-espacio/documentos/{documento}/archivo', [DocumentoController::cl
     ->middleware(['auth'])
     ->name('portal.documento');
 
+// Sustento de una licencia/ausencia PROPIA (autoriza por pertenencia)
+Route::get('mi-espacio/ausencias/{ausencia}/sustento', function (\App\Models\Ausencia $ausencia) {
+    $empleado = auth()->user()->empleado;
+    abort_unless($empleado && (int) $ausencia->empleado_id === (int) $empleado->id, 403);
+
+    return app(\App\Http\Controllers\AusenciaController::class)->servir($ausencia);
+})->middleware(['auth'])->name('portal.ausencia');
+
 // Boleta de pago PROPIA (autoriza por pertenencia; sirve desde SharePoint o local)
 Route::get('mi-espacio/boletas/{boleta}/archivo', function (\App\Models\BoletaPago $boleta) {
     $empleado = auth()->user()->empleado;
@@ -143,6 +151,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role_or_permission:SuperAdmin|ausencias.ver')->group(function () {
         Route::view('ausencias', 'ausencias.index')->name('ausencias.index');
+        Route::get('ausencias/{ausencia}/sustento', [\App\Http\Controllers\AusenciaController::class, 'sustento'])->name('ausencias.sustento');
     });
 
     Route::middleware('role_or_permission:SuperAdmin|descuentos.ver')->group(function () {

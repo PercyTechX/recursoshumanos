@@ -18,8 +18,16 @@ new class extends Component {
     #[Url]
     public string $filtroTipo = '';
 
+    #[Url]
+    public string $filtroEstado = '';
+
     public bool $mostrarForm = false;
     public ?int $editandoId = null;
+
+    // Rechazo (con motivo)
+    public bool $mostrarRechazo = false;
+    public ?int $rechazoId = null;
+    public string $rechazoMotivo = '';
 
     public ?int $empleado_id = null;
     public string $tipo = 'descanso_medico';
@@ -124,17 +132,91 @@ new class extends Component {
         $this->resetPage();
     }
 
+    public function updatingFiltroEstado(): void
+    {
+        $this->resetPage();
+    }
+
+    // ---- Aprobación (Supervisor visa → RRHH aprueba) ----
+
+    /** ¿El usuario puede visar esta solicitud? (supervisor del empleado, o RRHH). */
+    public function puedeVisar(Ausencia $a): bool
+    {
+        $u = auth()->user();
+        if (! $u->can('ausencias.visar')) {
+            return false;
+        }
+        if ($u->hasAnyRole(['SuperAdmin', 'RRHH', 'Gerencia'])) {
+            return true; // RRHH/Gerencia pueden visar en cualquier caso
+        }
+        // Un supervisor solo visa a SUS subordinados
+        $miEmpleado = $u->empleado?->id;
+
+        return $miEmpleado && (int) $a->empleado?->supervisor_id === (int) $miEmpleado;
+    }
+
+    public function visar(int $id): void
+    {
+        $a = Ausencia::with('empleado')->findOrFail($id);
+        abort_unless($this->puedeVisar($a) && $a->puede('visar'), 403);
+        $a->transicionar('visar');
+        $a->visado_por = auth()->id();
+        $a->fecha_visto = now();
+        $a->save();
+        session()->flash('ok', 'Solicitud visada. Pasa a RRHH.');
+    }
+
+    public function aprobar(int $id): void
+    {
+        abort_unless(auth()->user()->can('ausencias.aprobar'), 403);
+        $a = Ausencia::findOrFail($id);
+        abort_unless($a->puede('aprobar'), 403);
+        $a->transicionar('aprobar');
+        $a->decidida_por = auth()->id();
+        $a->fecha_decision = now();
+        $a->save();
+        session()->flash('ok', 'Solicitud aprobada.');
+    }
+
+    public function abrirRechazo(int $id): void
+    {
+        $this->rechazoId = $id;
+        $this->rechazoMotivo = '';
+        $this->resetErrorBag();
+        $this->mostrarRechazo = true;
+    }
+
+    public function rechazar(): void
+    {
+        $a = Ausencia::with('empleado')->findOrFail($this->rechazoId);
+        $ok = ($a->estado === Ausencia::PENDIENTE_SUPERVISOR && $this->puedeVisar($a))
+            || ($a->estado === Ausencia::PENDIENTE_RRHH && auth()->user()->can('ausencias.aprobar'));
+        abort_unless($ok && $a->puede('rechazar'), 403);
+
+        $this->validate(['rechazoMotivo' => ['required', 'string', 'max:300']], [], ['rechazoMotivo' => 'motivo']);
+        $a->transicionar('rechazar');
+        $a->comentario_decision = $this->rechazoMotivo;
+        $a->decidida_por = auth()->id();
+        $a->fecha_decision = now();
+        $a->save();
+
+        $this->mostrarRechazo = false;
+        session()->flash('ok', 'Solicitud rechazada.');
+    }
+
     public function with(): array
     {
         return [
             'ausencias' => Ausencia::query()
-                ->with('empleado')
+                ->with(['empleado', 'solicitadoPor'])
                 ->when($this->buscar, fn ($q) => $q->whereHas('empleado', fn ($w) => $w
                     ->where('nombres', 'like', '%'.$this->buscar.'%')
                     ->orWhere('apellidos', 'like', '%'.$this->buscar.'%')
                     ->orWhere('numero_documento', 'like', '%'.$this->buscar.'%')))
                 ->when($this->filtroTipo, fn ($q) => $q->where('tipo', $this->filtroTipo))
-                ->orderByDesc('fecha_inicio')->paginate(10),
+                ->when($this->filtroEstado === 'pendientes', fn ($q) => $q->pendientes())
+                ->when($this->filtroEstado && $this->filtroEstado !== 'pendientes', fn ($q) => $q->where('estado', $this->filtroEstado))
+                ->orderByDesc('fecha_inicio')->orderByDesc('id')->paginate(10),
             'empleados' => Empleado::where('situacion', 'activo')->orderBy('apellidos')->get(),
             'tipos' => Ausencia::TIPOS,
             'diasCalc' => Ausencia::calcularDias($this->fecha_inicio, $this->fecha_fin),
@@ -159,6 +241,15 @@ new class extends Component {
                 <option value="{{ $k }}">{{ $t[0] }}</option>
             @endforeach
         </select>
+        <select wire:model.live="filtroEstado" class="rounded-lg border-line bg-surface text-sm text-ink focus:border-primary focus:ring-primary">
+            <option value="">Todos los estados</option>
+            <option value="pendientes">Pendientes</option>
+            <option value="pendiente_supervisor">Pendiente (supervisor)</option>
+            <option value="pendiente_rrhh">Pendiente (RRHH)</option>
+            <option value="aprobada">Aprobadas</option>
+            <option value="rechazada">Rechazadas</option>
+            <option value="cancelada">Canceladas</option>
+        </select>
         @can('ausencias.crear')
             <button wire:click="nuevo" class="inline-flex items-center gap-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">
                 <x-icon name="plus" class="w-4 h-4" /> Nueva ausencia
@@ -175,7 +266,8 @@ new class extends Component {
                     <th class="px-4 py-3">Periodo</th>
                     <th class="px-4 py-3 text-center">Días</th>
                     <th class="px-4 py-3">Goce</th>
-                    <th class="px-4 py-3">Archivo</th>
+                    <th class="px-4 py-3">Estado</th>
+                    <th class="px-4 py-3">Sustento</th>
                     <th class="px-4 py-3 text-right">Acciones</th>
                 </tr>
             </thead>
@@ -197,15 +289,38 @@ new class extends Component {
                             @endif
                         </td>
                         <td class="px-4 py-3">
-                            @if ($a->archivo_path)
-                                <a href="{{ Storage::url($a->archivo_path) }}" target="_blank" class="inline-flex items-center gap-1 text-primary hover:underline" title="Ver archivo">
+                            @php
+                                $badgeL = [
+                                    'pendiente_supervisor' => 'bg-warning-tint text-warning', 'pendiente_rrhh' => 'bg-warning-tint text-warning',
+                                    'aprobada' => 'bg-success-tint text-success', 'rechazada' => 'bg-danger-tint text-danger',
+                                    'cancelada' => 'bg-canvas text-faint',
+                                ];
+                            @endphp
+                            <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $badgeL[$a->estado] ?? 'bg-canvas text-faint' }}">{{ $a->estado_label }}</span>
+                            @if ($a->estado === 'rechazada' && $a->comentario_decision)<div class="text-danger text-[11px] mt-1">{{ $a->comentario_decision }}</div>@endif
+                        </td>
+                        <td class="px-4 py-3">
+                            @if ($a->archivo_item_id || $a->archivo_path)
+                                <a href="{{ route('ausencias.sustento', $a) }}" target="_blank" class="inline-flex items-center gap-1 text-primary hover:underline" title="Ver sustento">
                                     <x-icon name="eye" class="w-4 h-4" /> Ver
                                 </a>
                             @else <span class="text-faint">—</span> @endif
                         </td>
                         <td class="px-4 py-3">
-                            <div class="inline-flex items-center gap-1 justify-end w-full">
-                                @php $btn = 'inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-canvas transition-colors'; @endphp
+                            <div class="flex items-center gap-1.5 justify-end flex-wrap">
+                                @php
+                                    $btn = 'inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-canvas transition-colors';
+                                    $chip = 'text-xs font-semibold px-2.5 py-1 rounded-lg border border-line hover:bg-canvas';
+                                @endphp
+                                @if ($a->estado === 'pendiente_supervisor' && $this->puedeVisar($a))
+                                    <button wire:click="visar({{ $a->id }})" class="{{ $chip }} text-success">Visar</button>
+                                    <button wire:click="abrirRechazo({{ $a->id }})" class="{{ $chip }} text-danger">Rechazar</button>
+                                @elseif ($a->estado === 'pendiente_rrhh')
+                                    @can('ausencias.aprobar')
+                                        <button wire:click="aprobar({{ $a->id }})" class="{{ $chip }} text-success">Aprobar</button>
+                                        <button wire:click="abrirRechazo({{ $a->id }})" class="{{ $chip }} text-danger">Rechazar</button>
+                                    @endcan
+                                @endif
                                 @can('ausencias.editar')
                                     <button wire:click="editar({{ $a->id }})" class="{{ $btn }} text-primary" title="Editar">
                                         <x-icon name="pencil" />
@@ -220,7 +335,7 @@ new class extends Component {
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="7" class="px-4 py-8 text-center text-faint">Sin ausencias registradas.</td></tr>
+                    <tr><td colspan="8" class="px-4 py-8 text-center text-faint">Sin ausencias registradas.</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -294,6 +409,29 @@ new class extends Component {
                     <div class="flex justify-end gap-2 pt-1">
                         <button type="button" wire:click="$set('mostrarForm', false)" class="rounded-lg border border-line text-muted text-sm font-semibold px-4 py-2 hover:bg-canvas">Cancelar</button>
                         <button type="submit" class="rounded-lg bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-4 py-2">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+
+    {{-- Modal: rechazar solicitud --}}
+    @if ($mostrarRechazo)
+        <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy/40 p-4">
+            <div class="w-full max-w-sm mt-16 rounded-2xl bg-surface shadow-xl">
+                <div class="flex items-center justify-between border-b border-line px-6 py-4">
+                    <h3 class="text-lg font-semibold text-navy">Rechazar solicitud</h3>
+                    <button wire:click="$set('mostrarRechazo', false)" class="text-faint hover:text-ink text-xl leading-none">&times;</button>
+                </div>
+                <form wire:submit="rechazar" class="px-6 py-5 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-muted mb-1">Motivo del rechazo *</label>
+                        <input type="text" wire:model="rechazoMotivo" placeholder="Ej. falta el CITT" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                        @error('rechazoMotivo') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" wire:click="$set('mostrarRechazo', false)" class="rounded-lg border border-line text-muted text-sm font-semibold px-4 py-2 hover:bg-canvas">Cancelar</button>
+                        <button type="submit" class="rounded-lg bg-danger hover:brightness-95 text-white text-sm font-semibold px-4 py-2">Rechazar</button>
                     </div>
                 </form>
             </div>
