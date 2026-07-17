@@ -55,6 +55,8 @@ Una fila por empleado × día (solo se crea cuando se marca algo):
   netas** · **[VB]**.
 - Al togglear D/A/C → `updateOrCreate` en `asistencia_dias` (permiso registrar/editar).
 - Al togglear VB → solo con `asistencia.vb` (Supervisor); guarda vb_por + vb_at.
+- La columna **VB muestra el nombre de quien validó y la fecha/hora** (no solo el check),
+  para seguimiento/auditoría. Ej. "✓ Willy Tello · 17/07 10:30".
 - Recalcula netas en vivo.
 
 ### Fase C — Integrar en los reportes de asistencia
