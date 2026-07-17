@@ -19,10 +19,12 @@
                    :class="open ? 'translate-x-0' : '-translate-x-full'"
                    class="fixed inset-y-0 left-0 z-40 w-64 bg-navy text-white flex flex-col transition-transform duration-200 lg:translate-x-0 lg:static lg:z-auto lg:shrink-0">
 
-                {{-- Marca --}}
-                <div class="h-16 flex items-center gap-2 px-5 border-b border-white/10">
-                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-white font-bold">R</span>
-                    <span class="font-semibold tracking-tight">{{ config('app.name', 'Sistema RRHH') }}</span>
+                {{-- Marca (GDS = empresa cliente) --}}
+                <div class="h-16 flex items-center gap-3 px-4 border-b border-white/10">
+                    <div class="bg-white rounded-lg px-2.5 py-1.5 flex items-center shrink-0">
+                        <img src="{{ asset('images/brand/logo-gds.png') }}" alt="GDS Infraestructura" class="h-6 w-auto">
+                    </div>
+                    <span class="font-semibold tracking-tight text-sm text-white/90">Sistema RRHH</span>
                 </div>
 
                 {{-- Navegación --}}
@@ -146,6 +148,11 @@
                             @csrf
                             <button type="submit" class="text-white/80 hover:text-white">Cerrar sesión</button>
                         </form>
+                    </div>
+                    {{-- Crédito del desarrollador --}}
+                    <div class="mt-4 pt-3 border-t border-white/10 flex items-center gap-2">
+                        <span class="text-[10px] uppercase tracking-wide text-white/35">Desarrollado por</span>
+                        <img src="{{ asset('images/brand/logo-percytech.png') }}" alt="PercyTech Solutions" class="h-4 w-auto opacity-80">
                     </div>
                 </div>
             </aside>

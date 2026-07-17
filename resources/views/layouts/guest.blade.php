@@ -13,14 +13,20 @@
     <body class="font-sans text-ink antialiased">
         <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gradient-to-br from-navy via-primary-dark to-primary">
             <div class="flex flex-col items-center">
-                <a href="/" wire:navigate class="flex items-center gap-2 text-white">
-                    <x-application-logo class="w-14 h-14 fill-current text-white/90" />
-                </a>
+                <div class="bg-white rounded-2xl px-5 py-4 shadow-lg">
+                    <img src="{{ asset('images/brand/logo-gds.png') }}" alt="GDS Infraestructura" class="h-12 w-auto">
+                </div>
                 <span class="mt-3 text-white text-lg font-semibold tracking-tight">{{ config('app.name', 'Sistema RRHH') }}</span>
             </div>
 
             <div class="w-full sm:max-w-md mt-6 px-6 py-6 bg-surface shadow-lg overflow-hidden sm:rounded-2xl">
                 {{ $slot }}
+            </div>
+
+            {{-- Crédito del desarrollador --}}
+            <div class="mt-6 flex items-center gap-2">
+                <span class="text-[11px] uppercase tracking-wide text-white/50">Desarrollado por</span>
+                <img src="{{ asset('images/brand/logo-percytech.png') }}" alt="PercyTech Solutions" class="h-5 w-auto opacity-90">
             </div>
         </div>
     </body>
