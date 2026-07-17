@@ -7,6 +7,7 @@ use App\Models\CategoriaActivo;
 use App\Models\User;
 use Database\Seeders\CatalogoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Volt\Volt;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
@@ -40,6 +41,22 @@ class ActivosTest extends TestCase
             ->assertOk()
             ->assertSee('Inventario de activos')
             ->assertSee('Taladro de prueba');
+    }
+
+    public function test_editar_activo_con_descripcion_y_codigo_nulos(): void
+    {
+        $user = $this->usuarioConRol('RRHH');
+        $cat = CategoriaActivo::first();
+        // Sin código ni descripción (columnas nullables)
+        $activo = Activo::create(['categoria_id' => $cat->id, 'nombre' => 'Escalera', 'costo' => 120, 'estado' => 'disponible']);
+
+        $this->actingAs($user);
+        Volt::test('activos.tabla')
+            ->call('editar', $activo->id)
+            ->assertHasNoErrors()
+            ->assertSet('nombre', 'Escalera')
+            ->assertSet('descripcion', '')
+            ->assertSet('codigo', '');
     }
 
     public function test_un_empleado_sin_permisos_no_accede(): void

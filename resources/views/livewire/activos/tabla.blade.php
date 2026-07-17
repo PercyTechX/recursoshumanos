@@ -70,7 +70,13 @@ new class extends Component {
     {
         $a = Activo::findOrFail($id);
         $this->editandoId = $a->id;
-        $this->fill($a->only(['categoria_id', 'nombre', 'codigo', 'estado', 'descripcion']));
+        // Coalesce a '' porque las columnas nullables (código/descripción) no pueden
+        // asignarse a propiedades string tipadas.
+        $this->categoria_id = $a->categoria_id;
+        $this->nombre = $a->nombre ?? '';
+        $this->codigo = $a->codigo ?? '';
+        $this->estado = $a->estado ?? 'disponible';
+        $this->descripcion = $a->descripcion ?? '';
         $this->costo = (string) $a->costo;
         $this->mostrarForm = true;
     }
