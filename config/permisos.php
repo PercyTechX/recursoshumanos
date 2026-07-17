@@ -33,8 +33,8 @@ return [
         'acciones' => ['ver' => 'Ver', 'crear' => 'Crear', 'aprobar' => 'Aprobar / Rechazar', 'eliminar' => 'Cancelar'],
     ],
     'ausencias' => [
-        'label' => 'Ausencias',
-        'acciones' => ['ver' => 'Ver', 'crear' => 'Crear', 'editar' => 'Editar', 'eliminar' => 'Eliminar'],
+        'label' => 'Ausencias / Licencias',
+        'acciones' => ['ver' => 'Ver', 'crear' => 'Crear', 'editar' => 'Editar', 'eliminar' => 'Eliminar', 'visar' => 'Visar (supervisor)', 'aprobar' => 'Aprobar / Rechazar'],
     ],
     'descuentos' => [
         'label' => 'Descuentos',
