@@ -38,7 +38,12 @@
         $tiempo = $partes ? implode(', ', $partes) : 'menos de un mes';
     }
 
-    $genero = $empleado->sexo === 'F' ? 'la señora' : ($empleado->sexo === 'M' ? 'el señor' : 'el(la) señor(a)');
+    // Personalización por género (tenemos el sexo del trabajador)
+    $f = $empleado->sexo === 'F';
+    $m = $empleado->sexo === 'M';
+    $tratamiento = $f ? 'la señora' : ($m ? 'el señor' : 'el(la) señor(a)');
+    $identificado = $f ? 'identificada' : ($m ? 'identificado' : 'identificado(a)');
+    $interesado = $f ? 'la interesada' : ($m ? 'el interesado' : 'el(la) interesado(a)');
     $cargoTxt = $empleado->cargo?->nombre ? 'desempeñando el cargo de <strong>'.$empleado->cargo->nombre.'</strong>' : 'como parte de nuestro personal';
     $areaTxt = $empleado->area?->nombre ? ', en el área de '.$empleado->area->nombre : '';
 @endphp
@@ -70,8 +75,8 @@
 
     <p>
         <strong>{{ $empresa['nombre'] }}</strong>, con RUC N° {{ $empresa['ruc'] }}, deja constancia que
-        {{ $genero }} <strong>{{ trim($empleado->nombres.' '.$empleado->apellidos) }}</strong>,
-        identificado(a) con {{ $empleado->tipo_documento ?? 'DNI' }} N° <strong>{{ $empleado->numero_documento }}</strong>,
+        {{ $tratamiento }} <strong>{{ trim($empleado->nombres.' '.$empleado->apellidos) }}</strong>,
+        {{ $identificado }} con {{ $empleado->tipo_documento ?? 'DNI' }} N° <strong>{{ $empleado->numero_documento }}</strong>,
         {{ $cesado ? 'laboró' : 'labora' }} en nuestra empresa {!! $cargoTxt !!}{{ $areaTxt }},
         desde el <strong>{{ $fechaLarga($ingreso) }}</strong>
         {{ $cesado ? 'hasta el '.$fechaLarga($fin) : 'a la fecha' }},
@@ -79,7 +84,7 @@
     </p>
 
     <p>
-        Se expide el presente certificado a solicitud del(la) interesado(a), para los fines que estime conveniente.
+        Se expide el presente certificado a solicitud de {{ $interesado }}, para los fines que estime conveniente.
     </p>
 
     <p style="margin-top:26px">{{ $empresa['ciudad'] }}, {{ $fechaLarga(now()) }}.</p>

@@ -61,6 +61,21 @@ class CertificadoTrabajoTest extends TestCase
             ->assertHeader('Content-Type', 'application/pdf');
     }
 
+    public function test_se_personaliza_por_genero(): void
+    {
+        $mujer = new Empleado(['nombres' => 'María', 'apellidos' => 'Quispe', 'numero_documento' => '41234567', 'sexo' => 'F', 'fecha_ingreso' => '2022-01-10', 'situacion' => 'activo']);
+        $html = view('pdf.certificado-trabajo', ['empleado' => $mujer])->render();
+        $this->assertStringContainsString('la señora', $html);
+        $this->assertStringContainsString('identificada', $html);
+        $this->assertStringContainsString('la interesada', $html);
+
+        $hombre = new Empleado(['nombres' => 'Juan', 'apellidos' => 'Pérez', 'numero_documento' => '40404040', 'sexo' => 'M', 'fecha_ingreso' => '2022-01-10', 'situacion' => 'activo']);
+        $htmlH = view('pdf.certificado-trabajo', ['empleado' => $hombre])->render();
+        $this->assertStringContainsString('el señor', $htmlH);
+        $this->assertStringContainsString('identificado con', $htmlH);
+        $this->assertStringContainsString('el interesado', $htmlH);
+    }
+
     public function test_los_tipos_de_cese_existen(): void
     {
         $this->assertNotNull(TipoDocumento::where('nombre', 'Certificado de Trabajo')->first());
