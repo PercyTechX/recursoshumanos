@@ -124,6 +124,8 @@ Route::middleware('auth')->group(function () {
         Route::get('empleados/exportar', [EmpleadoController::class, 'exportar'])->name('empleados.exportar');
         Route::get('empleados/{empleado}/hoja-ruta', fn (\App\Models\Empleado $empleado) => view('empleados.hoja-ruta', compact('empleado')))
             ->name('empleados.hoja-ruta');
+        Route::get('empleados/{empleado}/certificado-trabajo', [EmpleadoController::class, 'certificadoTrabajo'])
+            ->name('empleados.certificado');
         Route::get('empleados/{empleado}', fn (\App\Models\Empleado $empleado) => view('empleados.show', compact('empleado')))
             ->name('empleados.show');
     });

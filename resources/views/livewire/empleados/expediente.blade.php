@@ -315,6 +315,10 @@ new class extends Component {
                 <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $empleado->situacion === 'activo' ? 'bg-white/15' : 'bg-danger/30' }}">
                     {{ ucfirst($empleado->situacion) }}
                 </span>
+                <a href="{{ route('empleados.certificado', $empleado) }}" target="_blank"
+                   class="rounded-lg bg-white/15 hover:bg-white/25 text-white text-sm font-semibold px-4 py-2">
+                    Certificado de trabajo (PDF)
+                </a>
                 <a href="{{ route('empleados.hoja-ruta', $empleado) }}" wire:navigate
                    class="rounded-lg bg-white/15 hover:bg-white/25 text-white text-sm font-semibold px-4 py-2">
                     Generar hoja de ruta

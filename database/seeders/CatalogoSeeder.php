@@ -68,6 +68,9 @@ class CatalogoSeeder extends Seeder
             ['nombre' => 'Certificado de Homologación', 'dias_aviso_previo' => 45, 'requiere_vigencia' => true, 'compartible' => true],
             ['nombre' => 'Contrato de Trabajo', 'dias_aviso_previo' => 30, 'requiere_vigencia' => true, 'compartible' => false],
             ['nombre' => 'Hoja de Vida (CV)', 'dias_aviso_previo' => 0, 'requiere_vigencia' => false, 'compartible' => false],
+            // Documentos de cese (SUNAFIL): se sube el PDF firmado
+            ['nombre' => 'Liquidación de Beneficios Sociales', 'dias_aviso_previo' => 0, 'requiere_vigencia' => false, 'compartible' => false],
+            ['nombre' => 'Certificado de Trabajo', 'dias_aviso_previo' => 0, 'requiere_vigencia' => false, 'compartible' => false],
         ];
 
         foreach ($tipos as $t) {

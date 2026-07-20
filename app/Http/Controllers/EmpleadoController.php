@@ -3,11 +3,32 @@
 namespace App\Http\Controllers;
 
 use App\Models\Empleado;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EmpleadoController extends Controller
 {
+    /** Certificado de trabajo (constancia) auto-generado en PDF, listo para imprimir/firmar. */
+    public function certificadoTrabajo(Empleado $empleado): Response
+    {
+        abort_unless(auth()->user()->can('empleados.ver'), 403);
+        $empleado->loadMissing(['cargo', 'area']);
+
+        $pdf = Pdf::loadView('pdf.certificado-trabajo', ['empleado' => $empleado])
+            ->setPaper('a4')
+            ->setOption('isFontSubsettingEnabled', true)
+            ->output();
+
+        $nombre = 'Certificado_Trabajo_'.$empleado->numero_documento.'.pdf';
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$nombre.'"',
+        ]);
+    }
+
     /**
      * Exporta el listado de empleados a un archivo que Excel abre directamente.
      *
