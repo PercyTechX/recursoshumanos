@@ -759,10 +759,11 @@ new class extends Component {
                     <h3 class="text-lg font-semibold text-navy">Subir documento</h3>
                     <button wire:click="$set('mostrarDoc', false)" class="text-faint hover:text-ink text-xl leading-none">&times;</button>
                 </div>
-                <form wire:submit="subirDocumento" class="px-6 py-5 space-y-4">
+                <form wire:submit="subirDocumento" class="px-6 py-5 space-y-4"
+                      x-data="{ tipoSel: @js((string) $doc_tipo_id), venc: @js($tiposDocumento->mapWithKeys(fn ($t) => [(string) $t->id => (bool) $t->requiere_vigencia])) }">
                     <div>
                         <label class="block text-sm font-medium text-muted mb-1">Tipo de documento *</label>
-                        <select wire:model="doc_tipo_id" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                        <select wire:model="doc_tipo_id" x-on:change="tipoSel = $event.target.value" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
                             <option value="">— Seleccionar (DNI, CV, contrato…) —</option>
                             @foreach ($tiposDocumento as $t)
                                 <option value="{{ $t->id }}">{{ $t->nombre }}</option>
@@ -780,6 +781,13 @@ new class extends Component {
                             <input type="date" wire:model="doc_fecha_vencimiento" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
                         </div>
                     </div>
+                    {{-- Ayuda según el tipo elegido (usa el flag requiere_vigencia del catálogo) --}}
+                    <p x-show="tipoSel && venc[tipoSel] === false" x-cloak class="-mt-2 text-xs text-faint">
+                        Este documento no vence — puedes <strong>dejar las fechas en blanco</strong>.
+                    </p>
+                    <p x-show="tipoSel && venc[tipoSel] === true" x-cloak class="-mt-2 text-xs text-amber-600">
+                        Ingresa la <strong>fecha de vencimiento</strong> para recibir alertas antes de que caduque.
+                    </p>
                     <div>
                         <label class="block text-sm font-medium text-muted mb-1">Archivo (PDF o imagen) *</label>
                         <input type="file" wire:model="doc_archivo" class="w-full text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-canvas file:px-3 file:py-2 file:text-muted">
