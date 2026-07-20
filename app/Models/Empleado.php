@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 
 class Empleado extends Model
@@ -53,9 +55,24 @@ class Empleado extends Model
         'fecha_nacimiento' => 'date',
         'fecha_ingreso' => 'date',
         'fecha_cese' => 'date',
-        'sueldo' => 'decimal:2',
         'tiene_seguro' => 'boolean',
+        // Datos financieros CIFRADOS en reposo (revisión de BD #2).
+        // numero_documento NO se cifra (es único y se busca). El sueldo se cifra
+        // con su propio accessor (abajo) para conservar los 2 decimales.
+        'numero_cuenta' => 'encrypted',
+        'cci' => 'encrypted',
     ];
+
+    /** Sueldo: cifrado en reposo + normalizado a 2 decimales. */
+    protected function sueldo(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => is_null($value) ? null : Crypt::decryptString($value),
+            set: fn ($value) => ($value === null || $value === '')
+                ? null
+                : Crypt::encryptString(number_format((float) $value, 2, '.', '')),
+        );
+    }
 
     // ---- Relaciones ----
     public function user(): BelongsTo
