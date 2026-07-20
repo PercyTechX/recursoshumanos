@@ -89,9 +89,10 @@ Route::post('logout', function (Logout $logout) {
 // Acceso por PERMISO de cada módulo (configurable desde "Roles y accesos").
 // SuperAdmin siempre pasa (role_or_permission incluye el rol SuperAdmin).
 Route::middleware('auth')->group(function () {
-    // Roles y accesos (solo SuperAdmin)
+    // Roles y accesos + Catálogos (solo SuperAdmin)
     Route::middleware('role:SuperAdmin')->group(function () {
         Route::view('roles', 'roles.index')->name('roles.index');
+        Route::view('catalogos', 'catalogos.index')->name('catalogos.index');
     });
 
     Route::middleware('role_or_permission:SuperAdmin|usuarios.ver')->group(function () {

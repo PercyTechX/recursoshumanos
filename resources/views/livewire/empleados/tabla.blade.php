@@ -316,8 +316,8 @@ new class extends Component {
 
         return [
             'empleados' => $empleados,
-            'areas' => Area::orderBy('nombre')->get(),
-            'cargos' => Cargo::orderBy('nombre')->get(),
+            'areas' => Area::where('activo', true)->orderBy('nombre')->get(),
+            'cargos' => Cargo::where('activo', true)->orderBy('nombre')->get(),
             'sedes' => Sede::orderBy('nombre')->get(),
             'supervisores' => Empleado::orderBy('apellidos')->orderBy('nombres')->get(),
         ];

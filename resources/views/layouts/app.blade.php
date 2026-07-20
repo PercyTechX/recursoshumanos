@@ -129,6 +129,10 @@
                         </a>
                     @endcan
                     @role('SuperAdmin')
+                        <a href="{{ route('catalogos.index') }}" wire:navigate
+                           class="{{ $itemBase }} {{ request()->routeIs('catalogos.*') ? $itemOn : $itemOff }}">
+                            <x-icon name="clipboard" class="w-5 h-5 shrink-0" /> Catálogos
+                        </a>
                         <a href="{{ route('roles.index') }}" wire:navigate
                            class="{{ $itemBase }} {{ request()->routeIs('roles.*') ? $itemOn : $itemOff }}">
                             <x-icon name="key" class="w-5 h-5 shrink-0" /> Roles y accesos
