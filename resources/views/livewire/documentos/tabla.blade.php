@@ -509,7 +509,8 @@ new class extends Component {
                     <button wire:click="$set('mostrarForm', false)" class="text-faint hover:text-ink text-xl leading-none">&times;</button>
                 </div>
 
-                <form wire:submit="guardar" class="px-6 py-5 space-y-4">
+                <form wire:submit="guardar" class="px-6 py-5 space-y-4"
+                      x-data="{ tipoSel: @js((string) $tipo_documento_id), venc: @js($tipos->mapWithKeys(fn ($t) => [(string) $t->id => (bool) $t->requiere_vigencia])) }">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-muted mb-1">Empleado *</label>
@@ -523,7 +524,7 @@ new class extends Component {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-muted mb-1">Tipo de documento *</label>
-                            <select wire:model="tipo_documento_id" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
+                            <select wire:model="tipo_documento_id" x-on:change="tipoSel = $event.target.value" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
                                 <option value="">— Seleccionar —</option>
                                 @foreach ($tipos as $t)
                                     <option value="{{ $t->id }}">{{ $t->nombre }}</option>
@@ -539,6 +540,15 @@ new class extends Component {
                             <label class="block text-sm font-medium text-muted mb-1">Fecha de vencimiento</label>
                             <input type="date" wire:model="fecha_vencimiento" class="w-full rounded-lg border-line text-sm focus:border-primary focus:ring-primary">
                             @error('fecha_vencimiento') <span class="text-danger text-xs">{{ $message }}</span> @enderror
+                        </div>
+                        {{-- Ayuda según el tipo elegido (usa el flag requiere_vigencia del catálogo) --}}
+                        <div class="sm:col-span-2 -mt-1">
+                            <p x-show="tipoSel && venc[tipoSel] === false" x-cloak class="text-xs text-faint">
+                                Este documento no vence — puedes <strong>dejar las fechas en blanco</strong>.
+                            </p>
+                            <p x-show="tipoSel && venc[tipoSel] === true" x-cloak class="text-xs text-amber-600">
+                                Ingresa la <strong>fecha de vencimiento</strong> para recibir alertas antes de que caduque.
+                            </p>
                         </div>
                         <div class="sm:col-span-2">
                             <label class="block text-sm font-medium text-muted mb-1">Archivo (PDF o imagen, máx. 5 MB)</label>
