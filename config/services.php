@@ -50,6 +50,7 @@ return [
         'destinos' => [
             'documentos' => ['drive' => env('GRAPH_DRIVE_NAME', 'RRHH'), 'folder' => env('GRAPH_BASE_FOLDER', 'Doc_Sistemas')],
             'rendiciones' => ['drive' => env('GRAPH_DRIVE_RENDICIONES', 'CONTABILIDAD'), 'folder' => env('GRAPH_FOLDER_RENDICIONES', 'Rend_Sistemas')],
+            'backups' => ['drive' => env('GRAPH_DRIVE_BACKUPS', 'IT'), 'folder' => env('GRAPH_FOLDER_BACKUPS', 'BACKUP_SISTEMAS/RRHH_Sistemas')],
         ],
     ],
 

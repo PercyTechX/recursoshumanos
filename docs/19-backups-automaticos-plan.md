@@ -1,8 +1,33 @@
 # 19 — Backups automáticos de la base de datos a SharePoint
 
-> Estado: **PLANIFICADO** (retomar aquí). Aprobado el destino con el cliente.
+> Estado: **CONSTRUIDO y probado en local** (subida real a SharePoint IT verificada
+> 2026-07-21). Falta solo el **paso de despliegue**: crear el Cron Job en cPanel.
 > Objetivo: respaldo diario y automático de la BD de producción, guardado
 > **fuera del servidor**, sin intervención manual.
+
+## 0. Lo construido (2026-07-21)
+
+- `config/backups.php` — `retencion_dias` (env `BACKUP_RETENCION_DIAS`, def. 30).
+- `config/services.php` → destino **`backups`** = biblioteca `IT`, carpeta
+  `BACKUP_SISTEMAS/RRHH_Sistemas` (envs `GRAPH_DRIVE_BACKUPS` / `GRAPH_FOLDER_BACKUPS`).
+- `app/Services/Backups/DbDump.php` — volcado **PHP puro por PDO** (sin `mysqldump`).
+  Verificado contra MySQL de Laragon: 49 tablas, estructura + datos, restaurable.
+- `SharePointDocs::listar()` — lista una carpeta del destino (para purgar); 404 → [].
+- `app/Console/Commands/BackupCrear.php` — `backup:crear` (dump → gzip → subir →
+  purgar). Flag `--local` guarda solo en `storage/app/private/backups/`. Si Graph
+  falla, cae a local para no perder el backup.
+- `routes/console.php` — `Schedule::command('backup:crear')->dailyAt('02:00')`.
+- Tests: `tests/Feature/BackupCrearTest.php` (local + subida/purga con dobles).
+- **Subida real probada:** el `.sql.gz` llegó a `IT/BACKUP_SISTEMAS/RRHH_Sistemas`
+  y `listar()` lo lee de vuelta. **195 tests en verde.**
+
+### Falta para producción (al desplegar)
+- [ ] Agregar los 3 envs al `.env` de prod (`GRAPH_DRIVE_BACKUPS=IT`,
+  `GRAPH_FOLDER_BACKUPS=BACKUP_SISTEMAS/RRHH_Sistemas`, `BACKUP_RETENCION_DIAS=30`).
+- [ ] Verificar en SharePoint que la carpeta `IT/BACKUP_SISTEMAS` sea de **acceso
+  restringido** (PII).
+- [ ] Crear el **Cron Job** en cPanel (ver §5) y correr una vez a mano:
+  `php artisan backup:crear`.
 
 ## 1. Decisiones tomadas
 

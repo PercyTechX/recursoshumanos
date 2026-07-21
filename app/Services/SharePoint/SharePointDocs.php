@@ -111,6 +111,42 @@ class SharePointDocs
         ];
     }
 
+    /**
+     * Lista los archivos de una carpeta del destino (para purgar/inventariar).
+     * Devuelve [ ['id','name','createdDateTime'], ... ]. Carpeta vacía → la raíz del destino.
+     * Si la carpeta aún no existe, devuelve [] (no es error).
+     *
+     * @return array<int, array{id:string, name:string, createdDateTime:?string}>
+     */
+    public function listar(string $carpeta = '', string $destino = 'documentos'): array
+    {
+        $driveId = $this->driveId($destino);
+        $base = $this->baseFolder($destino);
+        $ruta = trim(($base !== '' ? $base.'/' : '').trim($carpeta, '/'), '/');
+
+        $endpoint = $ruta === ''
+            ? "/drives/{$driveId}/root/children"
+            : "/drives/{$driveId}/root:/{$this->rutaCarpeta($ruta)}:/children";
+
+        $resp = $this->graph->http()->get($endpoint, [
+            '$select' => 'id,name,createdDateTime',
+            '$top' => 999,
+        ]);
+
+        if ($resp->status() === 404) {
+            return []; // la carpeta aún no existe (p.ej. antes del primer backup)
+        }
+        if ($resp->failed()) {
+            throw new RuntimeException('No se pudo listar la carpeta ('.$resp->status().'): '.$resp->body());
+        }
+
+        return array_map(fn ($it) => [
+            'id' => (string) $it['id'],
+            'name' => (string) ($it['name'] ?? ''),
+            'createdDateTime' => $it['createdDateTime'] ?? null,
+        ], $resp->json('value', []));
+    }
+
     /** Contenido binario de un archivo por su item id (para descargar/servir). */
     public function contenido(string $itemId, string $destino = 'documentos'): string
     {
@@ -144,6 +180,14 @@ class SharePointDocs
     private function rutaCodificada(string $carpeta, string $nombre): string
     {
         $partes = array_filter(explode('/', trim($carpeta, '/').'/'.$nombre), fn ($p) => $p !== '');
+
+        return implode('/', array_map('rawurlencode', $partes));
+    }
+
+    /** Codifica una ruta de solo carpeta (sin archivo), segmento por segmento. */
+    private function rutaCarpeta(string $ruta): string
+    {
+        $partes = array_filter(explode('/', trim($ruta, '/')), fn ($p) => $p !== '');
 
         return implode('/', array_map('rawurlencode', $partes));
     }
