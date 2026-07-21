@@ -1,7 +1,9 @@
 # 19 — Backups automáticos de la base de datos a SharePoint
 
-> Estado: **CONSTRUIDO y probado en local** (subida real a SharePoint IT verificada
-> 2026-07-21). Falta solo el **paso de despliegue**: crear el Cron Job en cPanel.
+> Estado: ✅ **OPERATIVO EN PRODUCCIÓN** (2026-07-21). Cron diario 02:00 creado y
+> probado en cPanel (binario `/opt/cpanel/ea-php82/root/usr/bin/php`); el `.sql.gz`
+> sube a `IT/BACKUP_SISTEMAS/RRHH_Sistemas`. Pendiente menor: restringir el acceso
+> a esa carpeta en SharePoint.
 > Objetivo: respaldo diario y automático de la BD de producción, guardado
 > **fuera del servidor**, sin intervención manual.
 
