@@ -127,7 +127,7 @@
                 <div class="bg-surface border border-line rounded-2xl shadow-sm overflow-hidden">
                     <div class="flex items-center justify-between px-5 py-4 border-b border-line">
                         <h3 class="font-semibold text-navy flex items-center gap-2">
-                            <span class="text-xl">🎂</span> Cumpleaños de {{ ucfirst($mesNombre) }}
+                            <x-icon name="cake" class="w-5 h-5 text-primary" /> Cumpleaños de {{ ucfirst($mesNombre) }}
                         </h3>
                         <span class="text-xs text-muted tabular-nums">{{ $cumples->count() }} este mes</span>
                     </div>
@@ -137,7 +137,7 @@
                     @else
                         @if ($hoyCumplen->isNotEmpty())
                             <div class="bg-primary-tint px-5 py-3 text-sm text-primary-dark font-medium flex items-center gap-2">
-                                <span>🎉</span>
+                                <x-icon name="cake" class="w-4 h-4 shrink-0" />
                                 <span>Hoy cumple{{ $hoyCumplen->count() > 1 ? 'n' : '' }}
                                     <strong>{{ $hoyCumplen->map(fn ($e) => trim($e->nombres.' '.$e->apellidos))->implode(', ') }}</strong>. ¡Feliz cumpleaños!</span>
                             </div>
@@ -160,7 +160,9 @@
                                         <div class="text-xs text-muted truncate">{{ $e->cargo?->nombre ?? 'Sin cargo' }}@if ($e->area?->nombre) · {{ $e->area->nombre }}@endif</div>
                                     </div>
                                     @if ($esHoy)
-                                        <span class="text-xs font-semibold text-primary shrink-0">¡Hoy! 🎉</span>
+                                        <span class="inline-flex items-center gap-1 text-xs font-semibold text-primary shrink-0">
+                                            <x-icon name="cake" class="w-3.5 h-3.5" /> ¡Hoy!
+                                        </span>
                                     @endif
                                     <span class="text-xs text-muted shrink-0 tabular-nums whitespace-nowrap">cumple {{ $edad }}</span>
                                 </li>
