@@ -200,8 +200,17 @@ Route::get('_setup/{token}', function (string $token) {
         } catch (\Throwable $e) {
             $salida .= "\ngraph:ping FALLÓ → ".$e->getMessage()."\n";
         }
+
+        // Smoke test de backups (docs/19): confirma que el .sql.gz sube a IT desde prod.
+        try {
+            $codigo = Artisan::call('backup:crear');
+            $salida .= "\nbackup:crear (smoke test):\n".Artisan::output();
+            $salida .= $codigo === 0 ? "backup OK ✔\n" : "backup con advertencias (revisar arriba)\n";
+        } catch (\Throwable $e) {
+            $salida .= "\nbackup:crear FALLÓ → ".$e->getMessage()."\n";
+        }
     } else {
-        $salida .= "\ngraph:ping omitido (sin GRAPH_TENANT_ID en .env)\n";
+        $salida .= "\ngraph:ping y backup omitidos (sin GRAPH_TENANT_ID en .env)\n";
     }
 
     return response('<pre style="font:14px/1.5 monospace;padding:16px">'.e($salida)."\n\n".

@@ -141,6 +141,21 @@ FILESYSTEM_DISK=local
 
 MAIL_MAILER=log     # smtp con cuenta de cPanel más adelante
 VITE_APP_NAME="Sistema RRHH"
+
+# Microsoft Graph (SharePoint) — tenant/client/secret son PRIVADOS (notas)
+GRAPH_TENANT_ID=
+GRAPH_CLIENT_ID=
+GRAPH_CLIENT_SECRET=
+GRAPH_SITE_HOST=gdsinfraestructura.sharepoint.com
+GRAPH_SITE_PATH=/sites/GDSINFRAESTRUCTURASAC
+GRAPH_DRIVE_NAME=RRHH
+GRAPH_BASE_FOLDER=Doc_Sistemas
+GRAPH_DRIVE_RENDICIONES=CONTABILIDAD
+GRAPH_FOLDER_RENDICIONES=Rend_Sistemas
+# Backups de BD (docs/19) — nuevos en el re-deploy 2026-07-21
+GRAPH_DRIVE_BACKUPS=IT
+GRAPH_FOLDER_BACKUPS=BACKUP_SISTEMAS/RRHH_Sistemas
+BACKUP_RETENCION_DIAS=30
 ```
 
 ---
