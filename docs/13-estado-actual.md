@@ -77,6 +77,17 @@ vencimientos de documentos escaneados).
 - **Client secret de Graph vence 13/07/2028** → renovar antes en Entra ID.
 - Revocar el **GitHub PAT** usado para clonar en cPanel si sigue activo.
 
+### 10. Deuda técnica menor (conocida, baja prioridad)
+- **Certificado de trabajo — nombre del cargo sin escapar.** En
+  `resources/views/pdf/certificado-trabajo.blade.php` el cargo se inserta con
+  `{!! $cargoTxt !!}` (HTML crudo) porque `$cargoTxt` trae `<strong>…</strong>`.
+  El nombre del cargo va sin `e()`, así que un `<` o `>` en el nombre de un cargo
+  descuadraría ese PDF. **No es explotable por trabajadores**: los cargos solo los
+  crea el SuperAdmin en Catálogos. Fix pendiente: aplicar `e()` al nombre del cargo
+  dentro de `$cargoTxt`. Revisado 2026-07-21 al auditar "¿un caracter raro rompe algo?"
+  (el resto del sistema quedó limpio: SQL con bindings, Blade escapa, export Excel
+  escapa cada celda con `ENT_XML1`).
+
 ## Cómo se prueba en local
 
 `php artisan serve` (http://127.0.0.1:8000). Usuarios demo:

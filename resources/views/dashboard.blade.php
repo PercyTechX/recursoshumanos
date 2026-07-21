@@ -109,6 +109,67 @@
 
             </div>
 
+            {{-- Cumpleaños del mes (solo quien ve empleados; empleados activos con fecha de nacimiento) --}}
+            @can('empleados.ver')
+                @php
+                    $hoy = today();
+                    $meses = ['', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+                    $mesNombre = $meses[$hoy->month];
+                    $cumples = \App\Models\Empleado::with(['cargo', 'area'])
+                        ->where('situacion', 'activo')
+                        ->whereNotNull('fecha_nacimiento')
+                        ->whereMonth('fecha_nacimiento', $hoy->month)
+                        ->get()
+                        ->sortBy(fn ($e) => $e->fecha_nacimiento->day)
+                        ->values();
+                    $hoyCumplen = $cumples->filter(fn ($e) => $e->fecha_nacimiento->day === $hoy->day);
+                @endphp
+                <div class="bg-surface border border-line rounded-2xl shadow-sm overflow-hidden">
+                    <div class="flex items-center justify-between px-5 py-4 border-b border-line">
+                        <h3 class="font-semibold text-navy flex items-center gap-2">
+                            <span class="text-xl">🎂</span> Cumpleaños de {{ ucfirst($mesNombre) }}
+                        </h3>
+                        <span class="text-xs text-muted tabular-nums">{{ $cumples->count() }} este mes</span>
+                    </div>
+
+                    @if ($cumples->isEmpty())
+                        <div class="px-5 py-8 text-center text-sm text-muted">Nadie cumple años este mes.</div>
+                    @else
+                        @if ($hoyCumplen->isNotEmpty())
+                            <div class="bg-primary-tint px-5 py-3 text-sm text-primary-dark font-medium flex items-center gap-2">
+                                <span>🎉</span>
+                                <span>Hoy cumple{{ $hoyCumplen->count() > 1 ? 'n' : '' }}
+                                    <strong>{{ $hoyCumplen->map(fn ($e) => trim($e->nombres.' '.$e->apellidos))->implode(', ') }}</strong>. ¡Feliz cumpleaños!</span>
+                            </div>
+                        @endif
+                        <ul class="divide-y divide-line">
+                            @foreach ($cumples as $e)
+                                @php
+                                    $dia = $e->fecha_nacimiento->day;
+                                    $esHoy = $dia === $hoy->day;
+                                    $paso = $dia < $hoy->day;
+                                    $edad = $hoy->year - $e->fecha_nacimiento->year;
+                                @endphp
+                                <li class="flex items-center gap-3 px-5 py-3 {{ $esHoy ? 'bg-primary-tint/50' : ($paso ? 'opacity-55' : '') }}">
+                                    <span class="inline-flex flex-col items-center justify-center w-11 h-11 rounded-lg shrink-0 {{ $esHoy ? 'bg-primary text-white' : 'bg-canvas text-muted' }}">
+                                        <span class="text-base font-bold leading-none tabular-nums">{{ $dia }}</span>
+                                        <span class="text-[9px] uppercase leading-none mt-0.5">{{ substr($mesNombre, 0, 3) }}</span>
+                                    </span>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="text-sm font-medium text-ink truncate">{{ trim($e->nombres.' '.$e->apellidos) }}</div>
+                                        <div class="text-xs text-muted truncate">{{ $e->cargo?->nombre ?? 'Sin cargo' }}@if ($e->area?->nombre) · {{ $e->area->nombre }}@endif</div>
+                                    </div>
+                                    @if ($esHoy)
+                                        <span class="text-xs font-semibold text-primary shrink-0">¡Hoy! 🎉</span>
+                                    @endif
+                                    <span class="text-xs text-muted shrink-0 tabular-nums whitespace-nowrap">cumple {{ $edad }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </div>
+            @endcan
+
             @if ($u->empleado)
                 <a href="{{ route('portal.index') }}" wire:navigate class="inline-flex items-center gap-2 text-sm text-primary font-medium hover:underline">
                     <x-icon name="user" class="w-4 h-4" /> Ir a Mi espacio (mis datos, asistencia, tickets)
