@@ -1,8 +1,19 @@
 # 21 — Plan de documentación del Sistema RRHH
 
-> Estado: **PLANIFICADO**. Objetivo: llevar la documentación al nivel que usan
+> Estado: **EN EJECUCIÓN**. Objetivo: llevar la documentación al nivel que usan
 > los equipos serios (Diátaxis + docs-as-code + runbooks + C4), **partiendo de lo
 > que ya existe** y cubriendo los huecos hacia usuario final, operación y entrega.
+
+## 0. Progreso (2026-07-21)
+
+- ✅ **Fase A** — `docs/README.md` (índice por audiencia), `referencia/roles-y-permisos.md`
+  (generado desde `config/permisos.php`), y runbooks `operacion/restaurar-backup.md`
+  + `operacion/crons-y-tareas.md`.
+- 🟡 **Fase B** — `usuario/guia-trabajador.md`: **texto completo** (10 secciones, hecho
+  con capturas reales del portal demo). **Pendiente:** adjuntar las 13 imágenes en
+  `docs/usuario/img/` (el usuario las guarda; los nombres ya están referenciados).
+- ⏭️ **Siguiente:** commit de las imágenes de la guía del trabajador → luego
+  `usuario/guia-rrhh.md` (la más grande) o `usuario/guia-supervisor.md`.
 
 ## 1. Marco que seguimos (prácticas de industria)
 
