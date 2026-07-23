@@ -9,11 +9,13 @@
 - ✅ **Fase A** — `docs/README.md` (índice por audiencia), `referencia/roles-y-permisos.md`
   (generado desde `config/permisos.php`), y runbooks `operacion/restaurar-backup.md`
   + `operacion/crons-y-tareas.md`.
-- 🟡 **Fase B** — `usuario/guia-trabajador.md`: **texto completo** (10 secciones, hecho
-  con capturas reales del portal demo). **Pendiente:** adjuntar las 13 imágenes en
-  `docs/usuario/img/` (el usuario las guarda; los nombres ya están referenciados).
-- ⏭️ **Siguiente:** commit de las imágenes de la guía del trabajador → luego
-  `usuario/guia-rrhh.md` (la más grande) o `usuario/guia-supervisor.md`.
+- ✅ **Fase B (guías de usuario) COMPLETA** — las tres con capturas reales:
+  - `usuario/guia-trabajador.md` (10 secciones, 13 capturas).
+  - `usuario/guia-rrhh.md` (9 secciones, 10 capturas).
+  - `usuario/guia-supervisor.md` (5 secciones, 4 capturas).
+- ⏭️ **Siguiente (Fase C/D):** `operacion/troubleshooting.md`, `operacion/rotar-secret-graph.md`,
+  `referencia/arquitectura-c4.md` (Mermaid), `entregables/manual-administrador.md`,
+  `entregables/acta-de-entrega.md`, `usuario/guia-gerencia-contador.md`.
 
 ## 1. Marco que seguimos (prácticas de industria)
 
