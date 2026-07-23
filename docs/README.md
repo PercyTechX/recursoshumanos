@@ -12,7 +12,7 @@
 
 ### Usuario del sistema (RRHH, supervisor, trabajador)
 Para **usar** el sistema en el día a día.
-- [Guía de RRHH](usuario/guia-rrhh.md) *(en construcción)*
+- [Guía de RRHH](usuario/guia-rrhh.md)
 - [Guía del Supervisor](usuario/guia-supervisor.md) *(en construcción)*
 - [Guía del Trabajador — "Mi espacio"](usuario/guia-trabajador.md)
 - Referencia: [¿Qué puede hacer cada rol?](referencia/roles-y-permisos.md)
