@@ -67,13 +67,13 @@ class CertificadoTrabajoTest extends TestCase
         $html = view('pdf.certificado-trabajo', ['empleado' => $mujer])->render();
         $this->assertStringContainsString('la señora', $html);
         $this->assertStringContainsString('identificada', $html);
-        $this->assertStringContainsString('la interesada', $html);
+        $this->assertStringContainsString('a solicitud de la interesada', $html);
 
         $hombre = new Empleado(['nombres' => 'Juan', 'apellidos' => 'Pérez', 'numero_documento' => '40404040', 'sexo' => 'M', 'fecha_ingreso' => '2022-01-10', 'situacion' => 'activo']);
         $htmlH = view('pdf.certificado-trabajo', ['empleado' => $hombre])->render();
         $this->assertStringContainsString('el señor', $htmlH);
         $this->assertStringContainsString('identificado con', $htmlH);
-        $this->assertStringContainsString('el interesado', $htmlH);
+        $this->assertStringContainsString('a solicitud del interesado', $htmlH);
     }
 
     public function test_los_tipos_de_cese_existen(): void

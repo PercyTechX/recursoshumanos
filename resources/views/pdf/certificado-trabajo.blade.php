@@ -43,7 +43,8 @@
     $m = $empleado->sexo === 'M';
     $tratamiento = $f ? 'la señora' : ($m ? 'el señor' : 'el(la) señor(a)');
     $identificado = $f ? 'identificada' : ($m ? 'identificado' : 'identificado(a)');
-    $interesado = $f ? 'la interesada' : ($m ? 'el interesado' : 'el(la) interesado(a)');
+    // Incluye la contracción: "de la interesada" / "del interesado".
+    $interesado = $f ? 'de la interesada' : ($m ? 'del interesado' : 'de el(la) interesado(a)');
     $cargoTxt = $empleado->cargo?->nombre ? 'desempeñando el cargo de <strong>'.$empleado->cargo->nombre.'</strong>' : 'como parte de nuestro personal';
     $areaTxt = $empleado->area?->nombre ? ', en el área de '.$empleado->area->nombre : '';
 @endphp
@@ -84,7 +85,7 @@
     </p>
 
     <p>
-        Se expide el presente certificado a solicitud de {{ $interesado }}, para los fines que estime conveniente.
+        Se expide el presente certificado a solicitud {{ $interesado }}, para los fines que estime conveniente.
     </p>
 
     <p style="margin-top:26px">{{ $empresa['ciudad'] }}, {{ $fechaLarga(now()) }}.</p>
