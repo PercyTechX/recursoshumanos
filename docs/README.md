@@ -15,6 +15,7 @@ Para **usar** el sistema en el día a día.
 - [Guía de RRHH](usuario/guia-rrhh.md)
 - [Guía del Supervisor](usuario/guia-supervisor.md)
 - [Guía del Trabajador — "Mi espacio"](usuario/guia-trabajador.md)
+- [Guía de Gerencia y Contador](usuario/guia-gerencia-contador.md)
 - Referencia: [¿Qué puede hacer cada rol?](referencia/roles-y-permisos.md)
 
 ### Área de Sistemas / TI
@@ -22,14 +23,15 @@ Para **desplegar, mantener o resolver un incidente**.
 - [Despliegue en cPanel](09-deploy-cpanel.md) · [Runbook del último re-deploy](20-redeploy-2026-07-21.md)
 - [Restaurar un backup](operacion/restaurar-backup.md)
 - [Crons y tareas programadas](operacion/crons-y-tareas.md)
-- [Solución de problemas](operacion/troubleshooting.md) *(en construcción)*
-- [Arquitectura](02-arquitectura.md) · [Integración SharePoint/Graph](15-integracion-sharepoint-graph.md)
+- [Solución de problemas](operacion/troubleshooting.md)
+- [Renovar el secret de Graph](operacion/rotar-secret-graph.md)
+- [Arquitectura (C4)](referencia/arquitectura-c4.md) · [Integración SharePoint/Graph](15-integracion-sharepoint-graph.md)
 
 ### Gerencia / cliente
 Para saber **qué se construyó y qué se recibe**.
 - [Estado actual del proyecto](13-estado-actual.md)
-- [Acta de entrega](entregables/acta-de-entrega.md) *(en construcción)*
-- [Manual del administrador](entregables/manual-administrador.md) *(en construcción)*
+- [Acta de entrega](entregables/acta-de-entrega.md)
+- [Manual del administrador](entregables/manual-administrador.md)
 
 ### Mantenimiento del código
 - [Stack tecnológico](01-stack-tecnologico.md) · [Buenas prácticas](03-buenas-practicas.md) · [Diseño UI](04-ui-diseno.md)

@@ -13,9 +13,11 @@
   - `usuario/guia-trabajador.md` (10 secciones, 13 capturas).
   - `usuario/guia-rrhh.md` (9 secciones, 10 capturas).
   - `usuario/guia-supervisor.md` (5 secciones, 4 capturas).
-- ⏭️ **Siguiente (Fase C/D):** `operacion/troubleshooting.md`, `operacion/rotar-secret-graph.md`,
+- ✅ **Fase C/D COMPLETA** — `operacion/troubleshooting.md`, `operacion/rotar-secret-graph.md`,
   `referencia/arquitectura-c4.md` (Mermaid), `entregables/manual-administrador.md`,
   `entregables/acta-de-entrega.md`, `usuario/guia-gerencia-contador.md`.
+- **Documentación base completa.** Opcional a futuro: publicar con MkDocs, exportar
+  entregables a PDF, glosario de módulos, y consolidar 09+20 en operacion/.
 
 ## 1. Marco que seguimos (prácticas de industria)
 
