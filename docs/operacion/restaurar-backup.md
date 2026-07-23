@@ -5,7 +5,7 @@
 > Cómo restaurar la base `oipfutlf_rrhh` desde un backup. Úsalo si hubo pérdida de
 > datos, una migración salió mal, o para clonar prod en un entorno de prueba.
 
-## ⚠️ Antes de empezar — lee esto
+## Antes de empezar — lee esto
 
 **El `APP_KEY` es obligatorio.** Los campos financieros (número de cuenta, CCI,
 sueldo) están **cifrados** con el `APP_KEY` del `.env`. Si restauras la BD en un

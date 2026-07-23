@@ -21,7 +21,7 @@ Ruta del proyecto (usuario cPanel `oipfutlf`):
 
 ## Tareas programadas
 
-### 1. Backup diario de la base de datos ✅ ACTIVO
+### 1. Backup diario de la base de datos (ACTIVO)
 
 - **Comando (`artisan`):** `backup:crear`
 - **Qué hace:** vuelca la BD (dumper PHP, sin `mysqldump`), la comprime `.sql.gz`
@@ -41,7 +41,7 @@ Ruta del proyecto (usuario cPanel `oipfutlf`):
   "Subido a SharePoint: …_rrhh.sql.gz") o mira la carpeta en SharePoint.
 - Detalle: [docs/19](../19-backups-automaticos-plan.md).
 
-### 2. Reintento de subidas a SharePoint 🟡 OPCIONAL (recomendado)
+### 2. Reintento de subidas a SharePoint (OPCIONAL, recomendado)
 
 - **Comando:** `rendiciones:subir-pendientes`
 - **Qué hace:** reintenta subir a SharePoint los archivos que quedaron **locales**

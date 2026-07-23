@@ -84,7 +84,7 @@ La pestaña **Asistencia** es la primera que ves al entrar.
 **Tus marcaciones:** aparecen abajo en **"Mis marcaciones recientes"**, con el
 **tipo** (Ingreso/Salida), **fecha y hora**, **ubicación GPS** y el **origen**.
 
-> 📍 **Importante:** debes **permitir la ubicación** para poder marcar. Si la
+> **Importante:** debes **permitir la ubicación** para poder marcar. Si la
 > bloqueaste, actívala en los permisos del navegador/celular e intenta de nuevo.
 > La marcación queda con tu ubicación real, así que márcala **en tu lugar de trabajo**.
 
@@ -96,8 +96,9 @@ En la pestaña **Tickets** ves las órdenes de trabajo asignadas y las tomas y
 avanzas paso a paso. El ticket pasa por 3 estados:
 **1. Iniciado → 2. En ejecución → 3. Terminado**.
 
-> ⚠️ **Primero marca tu ingreso.** Si no has marcado ingreso (pestaña Asistencia),
-> verás el aviso *"Marca tu ingreso para poder tomar tickets"* y no podrás tomarlos.
+> **Importante — primero marca tu ingreso.** Si no has marcado ingreso (pestaña
+> Asistencia), verás el aviso *"Marca tu ingreso para poder tomar tickets"* y no
+> podrás tomarlos.
 
 ### Paso 1 — Tomar un ticket
 
@@ -113,7 +114,7 @@ En **"Tickets abiertos"** ves cada ticket con su **cliente** y **ubicación**. P
 Al tomarlo, el ticket queda en **"Iniciado"**. Cuando llegues **al local del
 cliente**, pulsa **"Marcar 'En ejecución' (en el local)"**.
 
-> 📍 **Regla de geocerca:** *"En ejecución"* y *"Terminar"* **solo se pueden marcar
+> **Regla de geocerca:** *"En ejecución"* y *"Terminar"* **solo se pueden marcar
 > dentro del local**. El sistema valida tu ubicación GPS. Si no estás en el sitio,
 > no te dejará avanzar.
 >
@@ -141,7 +142,7 @@ Incluye tu **documento, teléfono, correo, sede, fecha de ingreso, sistema
 pensionario, régimen de salud, banco y cuenta**, entre otros. Es **solo de
 consulta** (no se edita desde aquí).
 
-> ✏️ **¿Algún dato incorrecto o desactualizado?** No se corrige desde el portal:
+> **¿Algún dato incorrecto o desactualizado?** No se corrige desde el portal:
 > **comunícalo a RRHH** para que lo actualicen. Un guion (**—**) significa que ese
 > dato aún no está registrado.
 
@@ -158,15 +159,15 @@ El **estado** funciona como un semáforo:
 
 | Estado | Significa |
 |---|---|
-| 🟢 **Vigente** | Al día, sin problema. |
-| 🟠 **Por vencer** | Se acerca su fecha de vencimiento — atención. |
-| 🔴 **Vencido** | Ya venció; hay que renovarlo. |
+| **Vigente** | Al día, sin problema. |
+| **Por vencer** | Se acerca su fecha de vencimiento — atención. |
+| **Vencido** | Ya venció; hay que renovarlo. |
 
 En la columna **ARCHIVO**, si hay un documento adjunto podrás **verlo o
 descargarlo**; un guion (**—**) significa que aún no se cargó el archivo.
 
-> 📄 Esta sección es **informativa**. La carga y renovación de documentos la hace
-> **RRHH**. Si ves algo **Por vencer** o **Vencido**, coordínalo con RRHH.
+> **Nota:** esta sección es **informativa**. La carga y renovación de documentos la
+> hace **RRHH**. Si ves algo **Por vencer** o **Vencido**, coordínalo con RRHH.
 
 ---
 
@@ -209,9 +210,9 @@ Cada solicitud muestra su **periodo**, **días** y **estado**:
 
 | Estado | Significa |
 |---|---|
-| 🟡 **Pendiente** | Enviada, esperando aprobación. |
-| 🟢 **Aprobada** | Autorizada. |
-| 🔴 **Rechazada** | No autorizada (consulta el motivo con tu jefatura/RRHH). |
+| **Pendiente** | Enviada, esperando aprobación. |
+| **Aprobada** | Autorizada. |
+| **Rechazada** | No autorizada (consulta el motivo con tu jefatura/RRHH). |
 
 > El **saldo disponible** se calcula automáticamente. Solo puedes solicitar hasta
 > los días que tengas de saldo. La aprobación la hace tu **supervisor / RRHH**.
@@ -250,13 +251,13 @@ Tu solicitud recorre **dos pasos** antes de quedar aprobada:
 
 | Estado | Significa |
 |---|---|
-| 🟡 **Pendiente** | Enviada, esperando el visto del supervisor. |
-| 🔵 **Visada** | Tu supervisor la aprobó; falta el OK de RRHH. |
-| 🟢 **Aprobada** | Autorizada definitivamente. |
-| 🔴 **Rechazada** | No autorizada (por supervisor o RRHH). |
+| **Pendiente** | Enviada, esperando el visto del supervisor. |
+| **Visada** | Tu supervisor la aprobó; falta el OK de RRHH. |
+| **Aprobada** | Autorizada definitivamente. |
+| **Rechazada** | No autorizada (por supervisor o RRHH). |
 
-> 📎 Adjunta siempre el **sustento** cuando el tipo lo pide, o la solicitud no
-> podrá avanzar. Ese archivo se guarda de forma segura junto a tu expediente.
+> **Nota:** adjunta siempre el **sustento** cuando el tipo lo pide, o la solicitud
+> no podrá avanzar. Ese archivo se guarda de forma segura junto a tu expediente.
 
 ---
 
@@ -294,9 +295,9 @@ La pantalla tiene todo lo necesario:
 | **Gastaste todo** | Solo envía la rendición con los comprobantes. |
 | **Gastaste de más** | La empresa te reintegra la diferencia (según lo indique el balance). |
 
-> 💡 Deposita el sobrante a la **misma cuenta desde la que recibiste el dinero**:
-> si fue la empresa, a la cuenta de la empresa; si te lo depositó tu supervisor,
-> devuélveselo a él. Luego adjunta el voucher.
+> **Nota:** deposita el sobrante a la **misma cuenta desde la que recibiste el
+> dinero**: si fue la empresa, a la cuenta de la empresa; si te lo depositó tu
+> supervisor, devuélveselo a él. Luego adjunta el voucher.
 
 Una vez enviada, tu rendición pasa a **revisión y aprobación** (RRHH/Contabilidad).
 

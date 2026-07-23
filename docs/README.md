@@ -10,28 +10,28 @@
 
 ## Empieza aquí — elige tu perfil
 
-### 👤 Soy usuario del sistema (RRHH, supervisor, trabajador)
-Quiero **usar** el sistema en mi día a día.
+### Usuario del sistema (RRHH, supervisor, trabajador)
+Para **usar** el sistema en el día a día.
 - [Guía de RRHH](usuario/guia-rrhh.md) *(en construcción)*
 - [Guía del Supervisor](usuario/guia-supervisor.md) *(en construcción)*
-- [Guía del Trabajador — "Mi espacio"](usuario/guia-trabajador.md) *(en construcción)*
+- [Guía del Trabajador — "Mi espacio"](usuario/guia-trabajador.md)
 - Referencia: [¿Qué puede hacer cada rol?](referencia/roles-y-permisos.md)
 
-### 🛠️ Soy del área de Sistemas / TI
-Quiero **desplegar, mantener o resolver un incidente**.
+### Área de Sistemas / TI
+Para **desplegar, mantener o resolver un incidente**.
 - [Despliegue en cPanel](09-deploy-cpanel.md) · [Runbook del último re-deploy](20-redeploy-2026-07-21.md)
 - [Restaurar un backup](operacion/restaurar-backup.md)
 - [Crons y tareas programadas](operacion/crons-y-tareas.md)
 - [Solución de problemas](operacion/troubleshooting.md) *(en construcción)*
 - [Arquitectura](02-arquitectura.md) · [Integración SharePoint/Graph](15-integracion-sharepoint-graph.md)
 
-### 👔 Soy gerencia / cliente
-Quiero saber **qué se construyó y qué recibo**.
+### Gerencia / cliente
+Para saber **qué se construyó y qué se recibe**.
 - [Estado actual del proyecto](13-estado-actual.md)
 - [Acta de entrega](entregables/acta-de-entrega.md) *(en construcción)*
 - [Manual del administrador](entregables/manual-administrador.md) *(en construcción)*
 
-### 💻 Voy a mantener el código
+### Mantenimiento del código
 - [Stack tecnológico](01-stack-tecnologico.md) · [Buenas prácticas](03-buenas-practicas.md) · [Diseño UI](04-ui-diseno.md)
 - [Plan de documentación](21-plan-documentacion.md) (cómo está organizado esto)
 

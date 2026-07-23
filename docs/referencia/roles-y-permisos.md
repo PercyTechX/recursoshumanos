@@ -20,23 +20,23 @@
 
 ## Matriz por defecto (módulo × rol)
 
-✅ todas las acciones · 🟡 parcial (ver nota) · — sin acceso
+**Sí** = todas las acciones · **Parcial** (ver nota) · **—** = sin acceso
 
 | Módulo | SuperAdmin | RRHH | Gerencia | Supervisor | Contador | Empleado |
 |---|:--:|:--:|:--:|:--:|:--:|:--:|
-| Empleados | ✅ | ✅ | ✅ | ✅ | — | — |
-| Documentos | ✅ | ✅ | ✅ | ✅ | — | — |
-| Documentos compartidos | ✅ | ✅ | ✅ | ✅ | — | — |
-| Boletas de pago | ✅ | ✅ | ✅ | — | — | — |
-| Activos / EPP | ✅ | ✅ | ✅ | ✅ | — | — |
-| Vacaciones | ✅ | ✅ | ✅ | ✅ | — | — |
-| Ausencias / Licencias | ✅ | 🟡¹ | 🟡¹ | 🟡¹ | — | — |
-| Descuentos | ✅ | ✅ | ✅ | — | ✅ | — |
-| Clientes y sedes | ✅ | ✅ | ✅ | ✅ | — | — |
-| Tickets | ✅ | ✅ | ✅ | ✅ | — | — |
-| Asistencia (control) | ✅ | 🟡² | 🟡² | ✅ | — | — |
-| Rendiciones | ✅ | ✅ | ✅ | ✅ | — | — |
-| Usuarios | ✅ | ✅ | — | — | — | — |
+| Empleados | Sí | Sí | Sí | Sí | — | — |
+| Documentos | Sí | Sí | Sí | Sí | — | — |
+| Documentos compartidos | Sí | Sí | Sí | Sí | — | — |
+| Boletas de pago | Sí | Sí | Sí | — | — | — |
+| Activos / EPP | Sí | Sí | Sí | Sí | — | — |
+| Vacaciones | Sí | Sí | Sí | Sí | — | — |
+| Ausencias / Licencias | Sí | Parcial¹ | Parcial¹ | Parcial¹ | — | — |
+| Descuentos | Sí | Sí | Sí | — | Sí | — |
+| Clientes y sedes | Sí | Sí | Sí | Sí | — | — |
+| Tickets | Sí | Sí | Sí | Sí | — | — |
+| Asistencia (control) | Sí | Parcial² | Parcial² | Sí | — | — |
+| Rendiciones | Sí | Sí | Sí | Sí | — | — |
+| Usuarios | Sí | Sí | — | — | — | — |
 
 **Notas**
 - ¹ **Ausencias/Licencias:** la acción **"Visar (supervisor)"** por defecto la ejerce
